@@ -1,0 +1,27 @@
+comment: FewSpheres_simpleColors.model - Model of few spheres with simple colors (no diifuse, specular, ambinet cooficents).
+
+fovXdegree: 90.0
+skyBoxImageFileName: ./Models/panorama_image_with_direction_labels.jpg
+
+Light: location_x: 10.0 location_y: 3.0 location_z: 0.0 intensity: 1.0 comment: 
+
+sphereTextureFileName: ./Models/EmptyTexture.jpg
+
+Material: kColor: 1.0 color_R: 0.105882354 color_G: 0.52156866 color_B: 0.72156864 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelBlue
+Material: kColor: 1.0 color_R: 0.3529412 color_G: 0.32156864 color_B: 0.33333334 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelBlack
+Material: kColor: 1.0 color_R: 0.33333334 color_G: 0.61960787 color_B: 0.5137255 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelGreen
+Material: kColor: 1.0 color_R: 0.68235296 color_G: 0.3529412 color_B: 0.25490198 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelBrown
+Material: kColor: 1.0 color_R: 0.7647059 color_G: 0.79607844 color_B: 0.44313726 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelLightGreen
+Material: kColor: 1.0 color_R: 0.94509804 color_G: 0.79607844 color_B: 1.0 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelPink
+
+Sphere: center_x: 5.0 center_y: 0.0 center_z: -5.0 radius: 1.0 materialIndex: 5 textureIndex: 0
+Sphere: center_x: 4.0 center_y: 0.0 center_z: -6.5 radius: 1.0 materialIndex: 4 textureIndex: 0
+Sphere: center_x: 3.0 center_y: 0.0 center_z: -8.0 radius: 1.0 materialIndex: 3 textureIndex: 0
+Sphere: center_x: 2.0 center_y: 0.0 center_z: -9.5 radius: 1.0 materialIndex: 2 textureIndex: 0
+Sphere: center_x: 1.0 center_y: 0.0 center_z: -11.0 radius: 1.0 materialIndex: 1 textureIndex: 0
+Sphere: center_x: 0.0 center_y: 0.0 center_z: -12.5 radius: 1.0 materialIndex: 0 textureIndex: 0
+Sphere: center_x: -1.0 center_y: 0.0 center_z: -11.0 radius: 1.0 materialIndex: 1 textureIndex: 0
+Sphere: center_x: -2.0 center_y: 0.0 center_z: -9.5 radius: 1.0 materialIndex: 2 textureIndex: 0
+Sphere: center_x: -3.0 center_y: 0.0 center_z: -8.0 radius: 1.0 materialIndex: 3 textureIndex: 0
+Sphere: center_x: -4.0 center_y: 0.0 center_z: -6.5 radius: 1.0 materialIndex: 4 textureIndex: 0
+Sphere: center_x: -5.0 center_y: 0.0 center_z: -5.0 radius: 1.0 materialIndex: 5 textureIndex: 0

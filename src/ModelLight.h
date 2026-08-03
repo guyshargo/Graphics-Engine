@@ -1,6 +1,6 @@
 #pragma once
-#include <glm/glm.hpp>
 #include <string>
+#include <glm/glm.hpp>
 
 class ModelLight {
 public:
@@ -8,9 +8,13 @@ public:
     float intensity;
     std::string comment;
 
-    ModelLight(glm::vec3 location, float intensity, std::string comment)
-        : location(location), intensity(intensity), comment(comment) {}
+    // Constructors
+    ModelLight();
+    ModelLight(glm::vec3 location, float intensity, const std::string& comment);
+    
+    // Parse from string constructor
+    explicit ModelLight(const std::string& toStringStr);
 
-    ModelLight()
-        : location(0.0f), intensity(1.0f), comment("") {}
+    // Equivalent to Java's toString()
+    std::string toString() const;
 };

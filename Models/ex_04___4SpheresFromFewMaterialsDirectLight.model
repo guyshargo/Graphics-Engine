@@ -1,0 +1,18 @@
+comment: Spheres_from_few_materials - New version of the model with updated materials.
+
+fovXdegree: 50.0
+skyBoxImageFileName: ./Models/sky.jpg
+
+Light: location_x: 3.0 location_y: 10.0 location_z: 0.0 intensity: 1.0 comment: 
+
+sphereTextureFileName: ./Models/EmptyTexture.jpg
+
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.9 ka_R: 0.24725 ka_G: 0.1995 ka_B: 0.0745 kd_R: 0.75164 kd_G: 0.60648 kd_B: 0.22648 ks_R: 0.628281 ks_G: 0.555802 ks_B: 0.366065 shininess: 100.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.1 comment: gold
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.9 ka_R: 0.25 ka_G: 0.20725 ka_B: 0.20725 kd_R: 1.0 kd_G: 0.829 kd_B: 0.829 ks_R: 0.296648 ks_G: 0.296648 ks_B: 0.296648 shininess: 11.264 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.1 comment: gold
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.9 ka_R: 0.25 ka_G: 0.148 ka_B: 0.06475 kd_R: 0.4 kd_G: 0.2368 kd_B: 0.1036 ks_R: 0.774597 ks_G: 0.458561 ks_B: 0.200621 shininess: 76.8 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.1 comment: gold
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.9 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.01 kd_G: 0.01 kd_B: 0.01 ks_R: 0.5 ks_G: 0.5 ks_B: 0.5 shininess: 32.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.1 comment: gold
+
+Sphere: center_x: -2.0 center_y: 2.0 center_z: -10.0 radius: 2.0 materialIndex: 0 textureIndex: 0
+Sphere: center_x: -2.0 center_y: -2.0 center_z: -10.0 radius: 2.0 materialIndex: 1 textureIndex: 0
+Sphere: center_x: 2.0 center_y: 2.0 center_z: -10.0 radius: 2.0 materialIndex: 2 textureIndex: 0
+Sphere: center_x: 2.0 center_y: -2.0 center_z: -10.0 radius: 2.0 materialIndex: 3 textureIndex: 0

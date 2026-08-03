@@ -4,6 +4,7 @@
 #include "ModelLight.h"
 #include "ModelMaterial.h"
 #include "ModelSphere.h"
+#include "SphereTexture.h"
 
 class Model {
 public:
@@ -15,7 +16,10 @@ public:
     std::vector<std::string> sphereTextureFileNames;
     std::vector<ModelMaterial> materials;
     std::vector<ModelSphere> spheres;
+    std::vector<SphereTexture> skyBoxImageSphereTextures;
 
-    Model() 
-        : fovXdegree(0.0f), skyBoxImageFileName(""), comment("") {}
+    Model();
+
+    // Constructor
+    explicit Model(const std::string& modelFilename);
 };

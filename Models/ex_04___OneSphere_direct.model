@@ -1,0 +1,12 @@
+comment: OneSphere_direct.model - Model of one sphere with direct light.
+
+fovXdegree: 90.0
+skyBoxImageFileName: ./Models/DefaultSkyBoxImage.jpg
+
+Light: location_x: 10.0 location_y: 3.0 location_z: 0.0 intensity: 1.0 comment: 
+
+sphereTextureFileName: ./Models/EmptyTexture.jpg
+
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 1.0 ka_R: 0.2 ka_G: 0.2 ka_B: 0.2 kd_R: 0.75 kd_G: 0.75 kd_B: 0.75 ks_R: 0.25 ks_G: 0.25 ks_B: 0.25 shininess: 40.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: direct
+
+Sphere: center_x: 0.0 center_y: 0.0 center_z: -10.0 radius: 5.0 materialIndex: 0 textureIndex: 0

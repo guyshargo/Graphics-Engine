@@ -6,20 +6,61 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
-# Tell CMake where to download GLM (OpenGL Mathematics) from
+# Fetch GLM (OpenGL Mathematics)
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        0.9.9.8 # Using a stable release version
+    GIT_TAG        0.9.9.8
 )
-
-# Make GLM available to our project
 FetchContent_MakeAvailable(glm)
+
+# Fetch SDL2
+FetchContent_Declare(
+    SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG        release-2.28.5
+)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(SDL2)
+
+# Fetch ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.90.4
+)
+FetchContent_MakeAvailable(imgui)
+
+# Library for ImGui including SDL2 backend
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer2.cpp
+)
+target_include_directories(imgui PUBLIC 
+    ${imgui_SOURCE_DIR} 
+    ${imgui_SOURCE_DIR}/backends
+)
+target_link_libraries(imgui PRIVATE SDL2::SDL2-static)
 
 add_executable(GraphicsEngine
     src/main.cpp
     src/WorldModel.cpp
+    src/Model.cpp
+    src/ModelLight.cpp
+    src/ModelMaterial.cpp
+    src/ModelSphere.cpp
+    src/SphereTexture.cpp
+    src/Utilities.cpp
 )
 
-# Link GLM to our executable
-target_link_libraries(GraphicsEngine PRIVATE glm::glm)
+# Link everything
+target_link_libraries(GraphicsEngine PRIVATE 
+    glm::glm 
+    SDL2::SDL2-static
+    imgui
+)

@@ -1,0 +1,31 @@
+comment: FewSphereWithGround.model - Model of several spheres with ground.
+
+fovXdegree: 40.0
+skyBoxImageFileName: ./Models/panoramic-view-field-covered-grass-trees-sunlight-cloudy-sky.jpg
+
+Light: location_x: 5.0 location_y: 10.0 location_z: 0.0 intensity: 1.0 comment: 
+
+sphereTextureFileName: ./Models/1454054_texture_1-1.jpg
+sphereTextureFileName: ./Models/basketballTexture.jpg
+sphereTextureFileName: ./Models/yellow-wall-texture-with-scratches.jpg
+
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.3 ka_R: 0.25 ka_G: 0.20725 ka_B: 0.20725 kd_R: 1.0 kd_G: 0.829 kd_B: 0.829 ks_R: 0.296648 ks_G: 0.296648 ks_B: 0.296648 shininess: 1000.0 kReflection: 0.7 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: Mirror
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.1 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 1.0 kd_G: 1.0 kd_B: 1.0 ks_R: 1.0 ks_G: 1.0 ks_B: 1.0 shininess: 1000.0 kReflection: 0.1 kTransmission: 0.8 refractiveIndex: 1.52 kTexture: 0.0 comment: Glass
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 1.0 ka_R: 0.2 ka_G: 0.2 ka_B: 0.2 kd_R: 0.75 kd_G: 0.75 kd_B: 0.75 ks_R: 0.25 ks_G: 0.25 ks_B: 0.25 shininess: 40.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: direct
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.9 ka_R: 0.24725 ka_G: 0.1995 ka_B: 0.0745 kd_R: 0.75164 kd_G: 0.60648 kd_B: 0.22648 ks_R: 0.628281 ks_G: 0.555802 ks_B: 0.366065 shininess: 100.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.1 comment: gold
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.95 ka_R: 0.15 ka_G: 0.15 ka_B: 0.15 kd_R: 0.4 kd_G: 0.4 kd_B: 0.6 ks_R: 0.4 ks_G: 0.4 ks_B: 0.6 shininess: 100.0 kReflection: 0.05 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: Plastic with color
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.95 ka_R: 0.15 ka_G: 0.15 ka_B: 0.15 kd_R: 0.4 kd_G: 0.5 kd_B: 0.4 ks_R: 0.4 ks_G: 0.5 ks_B: 0.4 shininess: 100.0 kReflection: 0.05 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: Plastic with color
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.95 ka_R: 0.15 ka_G: 0.15 ka_B: 0.15 kd_R: 0.4 kd_G: 0.6 kd_B: 0.5 ks_R: 0.4 ks_G: 0.6 ks_B: 0.5 shininess: 100.0 kReflection: 0.05 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: Plastic with color
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 0.95 ka_R: 0.15 ka_G: 0.15 ka_B: 0.15 kd_R: 0.5 kd_G: 0.4 kd_B: 0.2 ks_R: 0.5 ks_G: 0.4 ks_B: 0.2 shininess: 100.0 kReflection: 0.05 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 0.0 comment: Plastic with color
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 1.0 ka_R: 0.25 ka_G: 0.25 ka_B: 0.25 kd_R: 0.75 kd_G: 0.75 kd_B: 0.75 ks_R: 0.1 ks_G: 0.1 ks_B: 0.1 shininess: 20.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 1.0 comment: texture
+Material: kColor: 0.0 color_R: 1.0 color_G: 1.0 color_B: 1.0 kDirect: 1.0 ka_R: 0.25 ka_G: 0.25 ka_B: 0.25 kd_R: 0.75 kd_G: 0.75 kd_B: 0.75 ks_R: 0.1 ks_G: 0.1 ks_B: 0.1 shininess: 20.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.52 kTexture: 1.0 comment: texture
+
+Sphere: center_x: 3.0 center_y: 1.0 center_z: -25.0 radius: 4.0 materialIndex: 0 textureIndex: 0
+Sphere: center_x: -1.5 center_y: -1.0 center_z: -16.0 radius: 2.0 materialIndex: 1 textureIndex: 0
+Sphere: center_x: -7.0 center_y: -1.0 center_z: -29.0 radius: 2.0 materialIndex: 3 textureIndex: 2
+Sphere: center_x: -4.0 center_y: -2.5 center_z: -13.0 radius: 0.5 materialIndex: 4 textureIndex: 0
+Sphere: center_x: -2.0 center_y: -2.5 center_z: -10.0 radius: 0.5 materialIndex: 8 textureIndex: 0
+Sphere: center_x: 0.5 center_y: -2.5 center_z: -12.0 radius: 0.5 materialIndex: 5 textureIndex: 0
+Sphere: center_x: 1.5 center_y: -2.5 center_z: -9.0 radius: 0.5 materialIndex: 7 textureIndex: 0
+Sphere: center_x: 3.5 center_y: -1.5 center_z: -15.0 radius: 1.5 materialIndex: 9 textureIndex: 1
+Sphere: center_x: -1.0 center_y: -100003.0 center_z: -20.0 radius: 100000.0 materialIndex: 0 textureIndex: 0

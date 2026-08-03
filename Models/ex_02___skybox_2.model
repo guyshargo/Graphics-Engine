@@ -1,0 +1,12 @@
+comment: Outer_space_skybox.model - Model with aerial city skybox
+
+fovXdegree: 90.0
+skyBoxImageFileName: ./Models/lok-yiu-cheung-o6k0ZH1eOwg-unsplash.jpg
+
+Light: location_x: 10.0 location_y: 3.0 location_z: 0.0 intensity: 1.0 comment: 
+
+sphereTextureFileName: ./Models/EmptyTexture.jpg
+
+Material: kColor: 1.0 color_R: 0.105882354 color_G: 0.52156866 color_B: 0.72156864 kDirect: 0.0 ka_R: 0.0 ka_G: 0.0 ka_B: 0.0 kd_R: 0.0 kd_G: 0.0 kd_B: 0.0 ks_R: 0.0 ks_G: 0.0 ks_B: 0.0 shininess: 1.0 kReflection: 0.0 kTransmission: 0.0 refractiveIndex: 1.0 kTexture: 0.0 comment: simplePastelBlue
+
+Sphere: center_x: 0.0 center_y: 0.0 center_z: 10.0 radius: 5.0 materialIndex: 0 textureIndex: 0

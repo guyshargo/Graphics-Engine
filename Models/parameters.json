@@ -1,0 +1,6 @@
+{
+    "depthOfRayTracing": 6,
+    "exercise": 11,
+    "modelFileName": "./Models/ex_02___skybox_with_direction_labels.model",
+    "saveImagePath": "./"
+}
