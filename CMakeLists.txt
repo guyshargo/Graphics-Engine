@@ -32,6 +32,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+# Fetch magic_enum
+FetchContent_Declare(
+    magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG        v0.9.6 # Using the latest stable release
+)
+FetchContent_MakeAvailable(magic_enum)
+
 # Library for ImGui including SDL2 backend
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -47,15 +55,20 @@ target_include_directories(imgui PUBLIC
 )
 target_link_libraries(imgui PRIVATE SDL2::SDL2-static)
 
+# Collect all source files using GLOB
+file(GLOB CORE_SOURCES "src/Core/*.cpp")
+file(GLOB RAYTRACER_SOURCES "src/Raytracer/*.cpp")
+
 add_executable(GraphicsEngine
-    src/main.cpp
-    src/WorldModel.cpp
-    src/Model.cpp
-    src/ModelLight.cpp
-    src/ModelMaterial.cpp
-    src/ModelSphere.cpp
-    src/SphereTexture.cpp
-    src/Utilities.cpp
+    ${CORE_SOURCES}
+    ${RAYTRACER_SOURCES}
+)
+
+# Tell the engine where to find the header files
+target_include_directories(GraphicsEngine PRIVATE
+    src/Core
+    src/Raytracer
+    src/vendor
 )
 
 # Link everything
@@ -63,4 +76,12 @@ target_link_libraries(GraphicsEngine PRIVATE
     glm::glm 
     SDL2::SDL2-static
     imgui
+    magic_enum::magic_enum
+)
+
+# Copy the Models folder to the output directory where the .exe is built
+add_custom_command(TARGET GraphicsEngine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/Models"
+    "$<TARGET_FILE_DIR:GraphicsEngine>/Models"
 )
