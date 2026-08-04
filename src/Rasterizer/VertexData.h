@@ -19,7 +19,7 @@ struct VertexData {
     // Calculated in vertex processing and used by face processing
     glm::vec3 pointEyeCoordinates; // Position of the vertex in eye coordinates
     glm::vec3 pointWindowCoordinates;   // Position of the vertex in window coordinates
-    glm::vec2 normalEyeCoordinates; // Normal vector at the vertex in eye coordinates
+    glm::vec3 normalEyeCoordinates; // Normal vector at the vertex in eye coordinates
     float lightingIntensity0to1;
 
     // Constructor

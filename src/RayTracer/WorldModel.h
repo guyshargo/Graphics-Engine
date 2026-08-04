@@ -23,7 +23,7 @@ class WorldModel {
 
         void setRenderingParams(int depthOfRayTracing);
         
-        void setExercise(ExerciseEnum exercise);
+        void setExercise(RayTracingExerciseEnum exercise);
 
         // Renders the color of a specific pixel in the image
         glm::vec3 renderPixel(int x, int y);

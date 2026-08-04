@@ -1,8 +1,8 @@
-#include "ModelMaterial.h"
-#include "Utilities.h"
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+#include "ModelMaterial.h"
+#include "Utilities.h"
 
 ModelMaterial::ModelMaterial()
     : kColor(0.0f), color(0.0f), kDirect(0.0f), ka(0.0f), kd(0.0f), ks(0.0f),

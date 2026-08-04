@@ -14,13 +14,13 @@ private:
     std::string modelFileName;
     std::string saveImagePath;
     int depthOfRayTracing;
-    ExerciseEnum exercise;
+    RayTracingExerciseEnum exercise;
 
     void setDefaultParams() {
         modelFileName = DefaultParams::MODEL_FILE_NAME;
         saveImagePath = DefaultParams::SAVE_IMAGE_PATH;
         depthOfRayTracing = DefaultParams::DEPTH_OF_RAY_TRACING;
-        exercise = static_cast<ExerciseEnum>(0); // Default fallback
+        exercise = static_cast<RayTracingExerciseEnum>(0); // Default fallback
     }
 
     bool loadFromFile() {
@@ -37,7 +37,7 @@ private:
             depthOfRayTracing = j.value("depthOfRayTracing", DefaultParams::DEPTH_OF_RAY_TRACING);
             
             // Enums are easily stored and read as integers
-            exercise = static_cast<ExerciseEnum>(j.value("exercise", 0)); // Default to first exercise if missing
+            exercise = static_cast<RayTracingExerciseEnum>(j.value("exercise", 0)); // Default to first exercise if missing
             
             return true;
         } catch (const json::exception& e) {
@@ -79,7 +79,7 @@ public:
     const std::string& getModelFileName() const { return modelFileName; }
     const std::string& getSaveImagePath() const { return saveImagePath; }
     int getDepthOfRayTracing() const { return depthOfRayTracing; }
-    ExerciseEnum getExercise() const { return exercise; }
+    RayTracingExerciseEnum getExercise() const { return exercise; }
 
     // --- Setters ---
     void setModelFileName(const std::string& name) {
@@ -97,7 +97,7 @@ public:
         saveToFile();
     }
 
-    void setExercise(ExerciseEnum ex) {
+    void setExercise(RayTracingExerciseEnum ex) {
         exercise = ex;
         saveToFile();
     }

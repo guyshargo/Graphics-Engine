@@ -20,7 +20,7 @@ void WorldModel::setRenderingParams(int depthOfRayTracing) {
     params.setDepthOfRayTracing(depthOfRayTracing);
 }
 
-void WorldModel::setExercise(ExerciseEnum exercise) {
+void WorldModel::setExercise(RayTracingExerciseEnum exercise) {
     params.setExercise(exercise);
 }
 
@@ -84,7 +84,7 @@ glm::vec3 WorldModel::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incident
 
     // Shadow
     bool isShadow = false;
-    if (params.getExercise() >= ExerciseEnum::EX_6_Shadow) {
+    if (params.getExercise() >= RayTracingExerciseEnum::EX_6_Shadow) {
         isShadow = isPointInShadow(model.lights[0].location, intersectionPoint, intersectionNormal, model);
     }
 
@@ -112,7 +112,7 @@ glm::vec3 WorldModel::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incident
     returnedColor += intersectedSphereMaterial.kDirect * directLighting;
 
     // adding reflected light if current pixel has reflection value
-    if (intersectedSphereMaterial.kReflection > 0.0f && params.getExercise() >= ExerciseEnum::EX_7_Reflection) {
+    if (intersectedSphereMaterial.kReflection > 0.0f && params.getExercise() >= RayTracingExerciseEnum::EX_7_Reflection) {
         glm::vec3 reflectedLight = calcReflectedLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             model, skyBoxImageSphereTexture, depthLevel);
 
@@ -120,7 +120,7 @@ glm::vec3 WorldModel::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incident
     }
 
     // adding transmitted light if current pixel has transmission value
-    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getExercise() >= ExerciseEnum::EX_8_Transparency) {
+    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getExercise() >= RayTracingExerciseEnum::EX_8_Transparency) {
         glm::vec3 transmittedLight = calcTransmissionLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             intersectionFromOutsideOfSphere, intersectedSphereMaterial.refractiveIndex, model, skyBoxImageSphereTexture, depthLevel);
 
