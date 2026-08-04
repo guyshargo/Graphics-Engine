@@ -74,19 +74,19 @@ class WorldModel {
 
 
         private:
-        int imageWidth;
-        int imageHeight;
-        float fovXdegree;
-        SavedParams params;
+            int imageWidth;
+            int imageHeight;
+            float fovXdegree;
+            SavedParams params;
 
-        std::unique_ptr<Model> model;
-        std::unique_ptr<SphereTexture> skyBoxImageSphereTexture;
-        
-        // Performs ray tracing for a given ray
-        glm::vec3 rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
-            const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const;
+            std::unique_ptr<Model> model;
+            std::unique_ptr<SphereTexture> skyBoxImageSphereTexture;
+            
+            // Performs ray tracing for a given ray
+            glm::vec3 rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
+                const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const;
 
-        // Finds the nearest intersection between a ray and a list of spheres
-        static std::optional<IntersectionResults> rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
-            const std::vector<ModelSphere>& spheres);
+            // Finds the nearest intersection between a ray and a list of spheres
+            static std::optional<IntersectionResults> rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
+                const std::vector<ModelSphere>& spheres);
 };

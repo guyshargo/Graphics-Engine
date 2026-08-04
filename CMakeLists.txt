@@ -58,10 +58,12 @@ target_link_libraries(imgui PRIVATE SDL2::SDL2-static)
 # Collect all source files using GLOB
 file(GLOB CORE_SOURCES "src/Core/*.cpp")
 file(GLOB RAYTRACER_SOURCES "src/Raytracer/*.cpp")
+file(GLOB RASTERIZER_SOURCES "src/Rasterizer/*.cpp")
 
 add_executable(GraphicsEngine
     ${CORE_SOURCES}
     ${RAYTRACER_SOURCES}
+    ${RASTERIZER_SOURCES}
 )
 
 # Tell the engine where to find the header files
@@ -69,6 +71,7 @@ target_include_directories(GraphicsEngine PRIVATE
     src/Core
     src/Raytracer
     src/vendor
+    src/Rasterizer
 )
 
 # Link everything

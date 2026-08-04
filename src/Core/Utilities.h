@@ -3,22 +3,26 @@
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+#include <vector>
+#include <filesystem>
 
 namespace Utilities {
-    
-    // Equivalent to Utilities.parseTokenWithoutParameter
+
+    // ==========================================
+    // Ray Tracer: Text Parsing Utilities
+    // ==========================================
     void parseTokenWithoutParameter(std::istringstream& scanner, const std::string& parameterName);
-
-    // Equivalent to Utilities.parseTokenFloat
     float parseTokenFloat(std::istringstream& scanner, const std::string& parameterName);
-
-    // Equivalent to Utilities.parseTokenInt
     int parseTokenInt(std::istringstream& scanner, const std::string& parameterName);
-
-    // Equivalent to Utilities.parseTokenString
     std::string parseTokenString(std::istringstream& scanner, const std::string& parameterName);
-
-    // Equivalent to Utilities.parseTokenRestOfString
     std::string parseTokenRestOfString(std::istringstream& scanner, const std::string& parameterName);
 
+    // ==========================================
+    // Rasterizer: File & Image Utilities
+    // ==========================================
+    std::string openFileChooser(const std::string& fileExtension, const std::string& initialDirectory);
+    std::string saveFileChooser(const std::string& fileExtension, const std::string& initialDirectory);
+    std::string getRelativePath(const std::string& absolutePath);
+    void saveIntBufferAsBMP(const std::vector<int>& buffer, int width, int height, const std::string& filePath);
+    void saveIntBufferAsCSV(const std::vector<int>& buffer, int width, int height, const std::string& filePath);
 }
