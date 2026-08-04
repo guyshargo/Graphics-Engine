@@ -1,6 +1,6 @@
 {
     "depthOfRayTracing": 6,
-    "exercise": 0,
-    "modelFileName": "C:\\Users\\sharg\\OneDrive\\Documents\\GitHub\\Graphics-Engine\\Models\\ex_08___4SpheresFromFewMaterials.model",
+    "exercise": 11,
+    "modelFileName": "./Models/ex_02___skybox_with_direction_labels.model",
     "saveImagePath": "./"
 }
