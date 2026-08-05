@@ -13,13 +13,13 @@
 #include "FragmentData.h"
 #include "OBJLoader.h"
 
-class WorldModel;
+class RasterizerWorld;
 
 class ObjectModel {
 public:
 
     // Constructor
-    ObjectModel(WorldModel* worldModel, int imageWidth, int imageHeight);
+    ObjectModel(RasterizerWorld* rasterizerWorld, int imageWidth, int imageHeight);
 
     void initTransformations();
     void setModelM(const glm::mat4& modelM);
@@ -36,15 +36,14 @@ public:
     using SetPixelCallback = std::function<void(int x, int y, const glm::vec3& color)>;
     using TextureGetPixel = std::function<glm::vec3(int x, int y)>;
     using TextureGetDimension = std::function<int()>;
-
+    
     void setTextureCallbacks(TextureGetPixel getPixel, TextureGetDimension getWidth, TextureGetDimension getHeight);
-
     void render(const SetPixelCallback& setPixel);
 
     static RasterizationExerciseEnum exercise;
 
 private:
-    WorldModel* worldModel;
+    RasterizerWorld* rasterizerWorld;
     int imageWidth;
     int imageHeight;
 
@@ -75,6 +74,6 @@ private:
     static void drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);
     
-    float lightingEquation(const glm::vec3& point, const glm::vec3& PointNormal, const glm::vec3& LightPos, float Kd, float Ks, float Ka, float shininess);
-    static glm::vec3 lightingEquation(const glm::vec3& point, const glm::vec3& PointNormal, const glm::vec3& LightPos, const glm::vec3& Kd, const glm::vec3& Ks, const glm::vec3& Ka, float shininess);
+    float lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, float Kd, float Ks, float Ka, float shininess);
+    static glm::vec3 lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, const glm::vec3& Kd, const glm::vec3& Ks, const glm::vec3& Ka, float shininess);
 };

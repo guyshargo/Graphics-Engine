@@ -2,7 +2,7 @@
 #include <glm/gtc/constants.hpp> // For math constants
 #include <glm/trigonometric.hpp> // For radians() and tan()
 
-#include "WorldModel.h"
+#include "RayTracerWorld.h"
 #include "Model.h"
 #include "IntersectionResults.h"
 #include "SphereTexture.h"
@@ -11,20 +11,20 @@
 #include "ModelMaterial.h"
 
 // Constructor implementation initializing variables
-WorldModel::WorldModel(int imageWidth, int imageHeight, float fovXdegree)
+RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree)
     : imageWidth(imageWidth), imageHeight(imageHeight) {
 }
-WorldModel::~WorldModel() = default; // Destructor implementation to clean up resources
+RayTracerWorld::~RayTracerWorld() = default; // Destructor implementation to clean up resources
 
-void WorldModel::setRenderingParams(int depthOfRayTracing) {
+void RayTracerWorld::setRenderingParams(int depthOfRayTracing) {
     params.setDepthOfRayTracing(depthOfRayTracing);
 }
 
-void WorldModel::setExercise(RayTracingExerciseEnum exercise) {
+void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
     params.setExercise(exercise);
 }
 
-bool WorldModel::load(const std::string& filename) {
+bool RayTracerWorld::load(const std::string& filename) {
     try {
         // Load the model from the specified file
         model = std::make_unique<Model>(filename);
@@ -39,7 +39,7 @@ bool WorldModel::load(const std::string& filename) {
     }
 }
 
-glm::vec3 WorldModel::renderPixel(int x, int y) {
+glm::vec3 RayTracerWorld::renderPixel(int x, int y) {
 
     if (!model || !skyBoxImageSphereTexture) {
         return glm::vec3(0.0f);
@@ -51,7 +51,7 @@ glm::vec3 WorldModel::renderPixel(int x, int y) {
     return pixelColor;
 }
 
-glm::vec3 WorldModel::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
+glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
             const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const{
 
     // stopping condition for recursion - return black, no light
@@ -130,7 +130,7 @@ glm::vec3 WorldModel::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incident
     return returnedColor;
 }
 
-glm::vec3 WorldModel::calcPixelDirection(int x, int y, int imageWidth, int imageHeight, float fovXdegree){
+glm::vec3 RayTracerWorld::calcPixelDirection(int x, int y, int imageWidth, int imageHeight, float fovXdegree){
     // X axis
     float xLeft = -glm::tan(glm::radians(fovXdegree) / 2.0f);
     int pixelSpacesX = imageWidth - 1;
@@ -147,7 +147,7 @@ glm::vec3 WorldModel::calcPixelDirection(int x, int y, int imageWidth, int image
     return glm::normalize(pixelDirection);
 }
 
-glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, glm::vec3 lightPosition, glm::vec3 kd, glm::vec3 ks,
+glm::vec3 RayTracerWorld::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, glm::vec3 lightPosition, glm::vec3 kd, glm::vec3 ks,
                                         glm::vec3 ka, float shininess) {
     glm::vec3 returnedColor(0.0f);
 
@@ -190,7 +190,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
     return returnedColor;
 }
 
-    std::optional<IntersectionResults> WorldModel::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
+    std::optional<IntersectionResults> RayTracerWorld::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
         const ModelSphere& sphere) {
         
         glm::vec3 sphereCenter = sphere.center;
@@ -245,7 +245,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
         return std::nullopt;
     }
 
-    std::optional<IntersectionResults> WorldModel::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
+    std::optional<IntersectionResults> RayTracerWorld::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
         const std::vector<ModelSphere>& spheres){
 
         //IntersectionResults object which will resemble the closest sphere which was intersected
@@ -275,7 +275,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
         return closestSphereIntersection;
     }
 
-    glm::vec3 WorldModel::calcKdCombinedWithTexture(glm::vec3 intersectionPoint, 
+    glm::vec3 RayTracerWorld::calcKdCombinedWithTexture(glm::vec3 intersectionPoint, 
                                                   glm::vec3 intersectedSphereCenter, 
                                                   const SphereTexture& intersectedSphereTexture, 
                                                   glm::vec3 intersectedSphereKd, 
@@ -292,7 +292,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
     }
 
 
-    bool WorldModel::isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) {
+    bool RayTracerWorld::isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) {
 
         // Vector from point to light source to check if is being intersected along the way
         glm::vec3 shadowRay = glm::normalize(lightLocation - point);
@@ -308,7 +308,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
 
     }
 
-    glm::vec3 WorldModel::calcReflectedLight(glm::vec3 incidentRayDirection, glm::vec3 intersectionPoint, glm::vec3 intersectionNormal,
+    glm::vec3 RayTracerWorld::calcReflectedLight(glm::vec3 incidentRayDirection, glm::vec3 intersectionPoint, glm::vec3 intersectionNormal,
         const Model& model, const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const {
         
         glm::vec3 normal = glm::normalize(intersectionNormal);
@@ -327,7 +327,7 @@ glm::vec3 WorldModel::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, g
         return rayTracing(outsideOfObjectPoint, reflectionRay, model, skyBoxImageSphereTexture, depthLevel + 1);
     }
 
-    glm::vec3 WorldModel::calcTransmissionLight(glm::vec3 incidentRayDirection, 
+    glm::vec3 RayTracerWorld::calcTransmissionLight(glm::vec3 incidentRayDirection, 
                                         glm::vec3 intersectionPoint, 
                                         glm::vec3 intersectionNormal,
                                         bool intersectionFromOutsideOfSphere, 

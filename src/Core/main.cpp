@@ -14,7 +14,7 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 
-#include "WorldModel.h"
+#include "RayTracerWorld.h"
 #include "SavedParams.h"
 #include "DefaultParams.h"
 #include "ExerciseEnum.h"
@@ -73,10 +73,10 @@ int main() {
     std::mt19937 g(rd());
     std::shuffle(pixelIndices.begin(), pixelIndices.end(), g);
 
-    WorldModel worldModel(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
-    bool isLoaded = worldModel.load(params.getModelFileName()); 
-    worldModel.setRenderingParams(params.getDepthOfRayTracing());
-    worldModel.setExercise(params.getExercise());
+    RayTracerWorld rayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
+    bool isLoaded = rayTracerWorld.load(params.getModelFileName()); 
+    rayTracerWorld.setRenderingParams(params.getDepthOfRayTracing());
+    rayTracerWorld.setExercise(params.getExercise());
 
     // UI Data
     int selectedExercise = static_cast<int>(params.getExercise());
@@ -106,7 +106,7 @@ int main() {
             std::string newPath = OpenFileDialog();
             if (!newPath.empty()) {
                 params.setModelFileName(newPath);
-                isLoaded = worldModel.load(params.getModelFileName());
+                isLoaded = rayTracerWorld.load(params.getModelFileName());
                 
                 // Reset rendering state
                 currentIndex = 0;
@@ -134,7 +134,7 @@ int main() {
                 if (ImGui::Selectable(itemName.c_str(), isSelected)) {
                     selectedExercise = static_cast<int>(val);
                     params.setExercise(static_cast<RayTracingExerciseEnum>(selectedExercise));
-                    worldModel.setExercise(params.getExercise());
+                    rayTracerWorld.setExercise(params.getExercise());
                     
                     // Reset rendering state
                     currentIndex = 0;
@@ -160,7 +160,7 @@ int main() {
                 int x = idx % DefaultParams::IMAGE_WIDTH;
                 int y = idx / DefaultParams::IMAGE_WIDTH;
 
-                glm::vec3 color = worldModel.renderPixel(x, y);
+                glm::vec3 color = rayTracerWorld.renderPixel(x, y);
                 
                 uint8_t r = static_cast<uint8_t>(std::min(color.r * 255.0f, 255.0f));
                 uint8_t g_c = static_cast<uint8_t>(std::min(color.g * 255.0f, 255.0f));

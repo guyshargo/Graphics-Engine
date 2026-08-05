@@ -10,9 +10,9 @@
 #include "ExerciseEnum.h"
 #include "ObjectModel.h"
 
-class WorldModel {
+class RasterizerWorld {
 public:
-    WorldModel(int imageWidth, int imageHeight);
+    RasterizerWorld(int imageWidth, int imageHeight);
 
     bool load(const std::string& fileName);
     bool modelHasTexture() const;

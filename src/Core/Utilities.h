@@ -23,6 +23,4 @@ namespace Utilities {
     std::string openFileChooser(const std::string& fileExtension, const std::string& initialDirectory);
     std::string saveFileChooser(const std::string& fileExtension, const std::string& initialDirectory);
     std::string getRelativePath(const std::string& absolutePath);
-    void saveIntBufferAsBMP(const std::vector<int>& buffer, int width, int height, const std::string& filePath);
-    void saveIntBufferAsCSV(const std::vector<int>& buffer, int width, int height, const std::string& filePath);
 }

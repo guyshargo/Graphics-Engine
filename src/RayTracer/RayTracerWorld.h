@@ -11,12 +11,12 @@
 class Model;
 class ErrorLogger;
 
-class WorldModel {
+class RayTracerWorld {
 
     public:
         // Constructor
-        WorldModel(int imageWidth, int imageHeight, float fovXdegree);
-        ~WorldModel(); // Destructor to clean up resources
+        RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree);
+        ~RayTracerWorld(); // Destructor to clean up resources
 
         // Sets the rendering parameters and loads the model from the specified file
         bool load(const std::string& filename);
