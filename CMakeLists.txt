@@ -85,6 +85,10 @@ target_link_libraries(GraphicsEngine PRIVATE
 # Copy the Models folder to the output directory where the .exe is built
 add_custom_command(TARGET GraphicsEngine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/Models"
-    "$<TARGET_FILE_DIR:GraphicsEngine>/Models"
+    "${CMAKE_SOURCE_DIR}/RT_Models"
+    "$<TARGET_FILE_DIR:GraphicsEngine>/RT_Models"
+    
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_SOURCE_DIR}/RAST_Models"
+    "$<TARGET_FILE_DIR:GraphicsEngine>/RAST_Models"
 )

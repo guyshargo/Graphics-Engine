@@ -73,7 +73,4 @@ private:
 
     static void drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);
-    
-    float lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, float Kd, float Ks, float Ka, float shininess);
-    static glm::vec3 lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, const glm::vec3& Kd, const glm::vec3& Ks, const glm::vec3& Ka, float shininess);
 };

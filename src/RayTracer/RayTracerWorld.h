@@ -31,15 +31,6 @@ class RayTracerWorld {
         // Calculates the normalized direction vector for a specific pixel
         static glm::vec3 calcPixelDirection(int x, int y, int imageWidth, int imageHeight, float fovXdegree);
 
-        // Calculates the color of a point on a surface based on lighting parameters
-        static glm::vec3 lightingEquation(glm::vec3 point,
-                                          glm::vec3 pointNormal, 
-                                          glm::vec3 lightPosition, 
-                                          glm::vec3 kd, 
-                                          glm::vec3 ks, 
-                                          glm::vec3 ka, 
-                                          float shininess);
-
         // Calculates the combined diffuse reflection coefficient (Kd) and texture color for a point on a sphere
         static glm::vec3 calcKdCombinedWithTexture(glm::vec3 intersectionPoint, 
                                                   glm::vec3 intersectedSphereCenter, 
@@ -71,7 +62,6 @@ class RayTracerWorld {
                                         const Model& model, 
                                         const SphereTexture& skyBoxImageSphereTexture, 
                                         int depthLevel) const;
-
 
         private:
             int imageWidth;

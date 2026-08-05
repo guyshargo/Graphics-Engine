@@ -9,11 +9,12 @@
 #include "YourUtilities.h"
 #include "ModelSphere.h"
 #include "ModelMaterial.h"
+#include "Utilities.h"
 
 // Constructor implementation initializing variables
 RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree)
-    : imageWidth(imageWidth), imageHeight(imageHeight) {
-}
+    : imageWidth(imageWidth), imageHeight(imageHeight) {}
+    
 RayTracerWorld::~RayTracerWorld() = default; // Destructor implementation to clean up resources
 
 void RayTracerWorld::setRenderingParams(int depthOfRayTracing) {
@@ -21,7 +22,7 @@ void RayTracerWorld::setRenderingParams(int depthOfRayTracing) {
 }
 
 void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
-    params.setExercise(exercise);
+    params.setRtExercise(exercise);
 }
 
 bool RayTracerWorld::load(const std::string& filename) {
@@ -84,7 +85,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
 
     // Shadow
     bool isShadow = false;
-    if (params.getExercise() >= RayTracingExerciseEnum::EX_6_Shadow) {
+    if (params.getRtExercise() >= RayTracingExerciseEnum::EX_6_Shadow) {
         isShadow = isPointInShadow(model.lights[0].location, intersectionPoint, intersectionNormal, model);
     }
 
@@ -99,12 +100,12 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
                                                          intersectedSphereMaterial.kd, intersectedSphereMaterial.kTexture);
 
         // 3 light types calculated to one vector
-        directLighting = lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+        directLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
             combinedKd, intersectedSphereMaterial.ks, intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
     }
     // if its shadowed - kd and ks are 0
     else {
-        directLighting = lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+        directLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
             glm::vec3(0.0f), glm::vec3(0.0f), intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
     }
 
@@ -112,7 +113,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     returnedColor += intersectedSphereMaterial.kDirect * directLighting;
 
     // adding reflected light if current pixel has reflection value
-    if (intersectedSphereMaterial.kReflection > 0.0f && params.getExercise() >= RayTracingExerciseEnum::EX_7_Reflection) {
+    if (intersectedSphereMaterial.kReflection > 0.0f && params.getRtExercise() >= RayTracingExerciseEnum::EX_7_Reflection) {
         glm::vec3 reflectedLight = calcReflectedLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             model, skyBoxImageSphereTexture, depthLevel);
 
@@ -120,7 +121,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     }
 
     // adding transmitted light if current pixel has transmission value
-    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getExercise() >= RayTracingExerciseEnum::EX_8_Transparency) {
+    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getRtExercise() >= RayTracingExerciseEnum::EX_8_Transparency) {
         glm::vec3 transmittedLight = calcTransmissionLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             intersectionFromOutsideOfSphere, intersectedSphereMaterial.refractiveIndex, model, skyBoxImageSphereTexture, depthLevel);
 
@@ -145,49 +146,6 @@ glm::vec3 RayTracerWorld::calcPixelDirection(int x, int y, int imageWidth, int i
     // vector from eye to specific pixel in window
     glm::vec3 pixelDirection = glm::vec3(xLeft + xDelta * x, yBottom + yDelta * y, -1.0f);
     return glm::normalize(pixelDirection);
-}
-
-glm::vec3 RayTracerWorld::lightingEquation(glm::vec3 point, glm::vec3 pointNormal, glm::vec3 lightPosition, glm::vec3 kd, glm::vec3 ks,
-                                        glm::vec3 ka, float shininess) {
-    glm::vec3 returnedColor(0.0f);
-
-    glm::vec3 normal = glm::normalize(pointNormal);
-    glm::vec3 lightDir = glm::normalize(lightPosition - point);
-
-    // cos of angle between light direction and normal
-    float NdotL = glm::dot(normal, lightDir);
-
-    /*******
-    Diffusive Lighting: max between 0 (back of the surface so no light) and NdotL
-    ********/
-    float diffusiveLight = glm::max(NdotL, 0.0f);
-    returnedColor += diffusiveLight * kd;
-
-    /*******
-    Specular Lighting
-    ********/
-    // if light is in front of object calculate specular light
-    if (NdotL >= 0) {
-        // Calculate reflection vector R, where the light ray bounces to
-        glm::vec3 specularR = glm::normalize(2.0f * NdotL * normal - lightDir);
-
-        // Direction vector of eye - from intersection point to camera
-        glm::vec3 specularV = glm::normalize(-point);
-
-        // if returned ray and eye direction are opposite to each other take max
-        float RdotV = glm::max(glm::dot(specularR, specularV), 0.0f);
-
-        // Adding shininess factor - how concentrated is the shine
-        float specularLight = glm::pow(RdotV, shininess);
-        returnedColor += specularLight * ks;
-    }
-
-    /*******
-    Ambient Lighting: constant light that is always present
-    ********/
-    returnedColor += ka;
-
-    return returnedColor;
 }
 
     std::optional<IntersectionResults> RayTracerWorld::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
