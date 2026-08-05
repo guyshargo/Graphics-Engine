@@ -11,16 +11,20 @@ using json = nlohmann::json;
 
 class SavedParams {
 private:
-    std::string modelFileName;
+    std::string rtModelFileName;
+    std::string rastModelFileName;
     std::string saveImagePath;
     int depthOfRayTracing;
-    RayTracingExerciseEnum exercise;
+    RayTracingExerciseEnum rtExercise;
+    RasterizationExerciseEnum rastExercise;
 
     void setDefaultParams() {
-        modelFileName = DefaultParams::MODEL_FILE_NAME;
+        rtModelFileName = DefaultParams::RT_MODEL_FILE_NAME;
+        rastModelFileName = DefaultParams::RAST_MODEL_FILE_NAME;
         saveImagePath = DefaultParams::SAVE_IMAGE_PATH;
         depthOfRayTracing = DefaultParams::DEPTH_OF_RAY_TRACING;
-        exercise = static_cast<RayTracingExerciseEnum>(0); // Default fallback
+        rtExercise = static_cast<RayTracingExerciseEnum>(0); 
+        rastExercise = static_cast<RasterizationExerciseEnum>(0); 
     }
 
     bool loadFromFile() {
@@ -31,15 +35,16 @@ private:
             json j;
             file >> j; // Magically parses the entire file into the JSON object
             
-            // The .value() function tries to read the key, but falls back to the default if missing
-            modelFileName = j.value("modelFileName", DefaultParams::MODEL_FILE_NAME);
+            rtModelFileName = j.value("rtModelFileName", DefaultParams::RT_MODEL_FILE_NAME);
+            rastModelFileName = j.value("rastModelFileName", DefaultParams::RAST_MODEL_FILE_NAME);
             saveImagePath = j.value("saveImagePath", DefaultParams::SAVE_IMAGE_PATH);
             depthOfRayTracing = j.value("depthOfRayTracing", DefaultParams::DEPTH_OF_RAY_TRACING);
             
-            // Enums are easily stored and read as integers
-            exercise = static_cast<RayTracingExerciseEnum>(j.value("exercise", 0)); // Default to first exercise if missing
+            rtExercise = static_cast<RayTracingExerciseEnum>(j.value("rtExercise", 0)); 
+            rastExercise = static_cast<RasterizationExerciseEnum>(j.value("rastExercise", 0));
             
             return true;
+
         } catch (const json::exception& e) {
             std::cerr << "JSON parsing error: " << e.what() << "\n";
             return false;
@@ -58,14 +63,16 @@ public:
 
     bool saveToFile() const {
         json j;
-        j["modelFileName"] = modelFileName;
+        j["rtModelFileName"] = rtModelFileName;
+        j["rastModelFileName"] = rastModelFileName;
         j["saveImagePath"] = saveImagePath;
         j["depthOfRayTracing"] = depthOfRayTracing;
-        j["exercise"] = static_cast<int>(exercise); 
+        j["rtExercise"] = static_cast<int>(rtExercise); 
+        j["rastExercise"] = static_cast<int>(rastExercise);
 
         std::ofstream file("parameters.json");
         if (file.is_open()) {
-            // dump(4) automatically formats the JSON with a beautiful 4-space indent
+            // automatically formats the JSON with a 4-space indent
             file << j.dump(4); 
             return true;
         }
@@ -75,15 +82,21 @@ public:
     }
 
     // --- Getters ---
-    // Returning strings by const reference prevents expensive string copies
-    const std::string& getModelFileName() const { return modelFileName; }
+    const std::string& getRtModelFileName() const { return rtModelFileName; }
+    const std::string& getRastModelFileName() const { return rastModelFileName; }
     const std::string& getSaveImagePath() const { return saveImagePath; }
     int getDepthOfRayTracing() const { return depthOfRayTracing; }
-    RayTracingExerciseEnum getExercise() const { return exercise; }
+    RayTracingExerciseEnum getRtExercise() const { return rtExercise; }
+    RasterizationExerciseEnum getRastExercise() const { return rastExercise; }
 
     // --- Setters ---
-    void setModelFileName(const std::string& name) {
-        modelFileName = name;
+    void setRtModelFileName(const std::string& name) {
+        rtModelFileName = name;
+        saveToFile();
+    }
+
+    void setRastModelFileName(const std::string& name) {
+        rastModelFileName = name;
         saveToFile();
     }
 
@@ -97,8 +110,13 @@ public:
         saveToFile();
     }
 
-    void setExercise(RayTracingExerciseEnum ex) {
-        exercise = ex;
+    void setRtExercise(RayTracingExerciseEnum ex) {
+        rtExercise = ex;
+        saveToFile();
+    }
+
+    void setRastExercise(RasterizationExerciseEnum ex) {
+        rastExercise = ex;
         saveToFile();
     }
 };

@@ -1,6 +1,7 @@
 #include "ObjectModel.h"
 #include "RasterizerWorld.h"
 #include "BarycentricCoordinates.h"
+#include "Utilities.h"
 #include <iostream>
 #include <algorithm>
 
@@ -116,7 +117,7 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
 
     // calculate lighting for a vertex for 'gourard shading'
     if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
-        float vertexLighting = lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
+        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
                                                 rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
                                                 rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
 
@@ -172,7 +173,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
 					vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates);
 
         // for flat shading
-        float polygonLighting = lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
+        float polygonLighting = Utilities::lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
                                                  rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular,
                                                  rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
 
@@ -277,7 +278,7 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 
     } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
         // calculate light for every pixel with its unique location and normal
-        float pixelLighting = lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
+        float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                 lightPositionEyeCoordinates,
                                                 rasterizerWorld -> lighting_Diffuse,
                                                 rasterizerWorld -> lighting_Specular,
@@ -299,7 +300,7 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 
     } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
 
-        float pixelLighting = lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
+        float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                 lightPositionEyeCoordinates,
                                                 rasterizerWorld -> lighting_Diffuse,
                                                 rasterizerWorld -> lighting_Specular,
@@ -384,55 +385,4 @@ glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2
     int maxY = static_cast<int>(glm::ceil(glm::min(static_cast<float>(imageHeight - 1), glm::max(p1.y, glm::max(p2.y, p3.y)))));
 
     return glm::ivec4(minX, maxX, minY, maxY);
-}
-
-float ObjectModel::lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, 
-                                    float Kd, float Ks, float Ka, float shininess) {
-    
-    glm::vec3 color = lightingEquation(point, pointNormal, lightPos, glm::vec3(Kd), glm::vec3(Ks), glm::vec3(Ka), shininess);
-    return color.x;
-}
-
-glm::vec3 ObjectModel::lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, 
-                                        const glm::vec3& Kd, const glm::vec3& Ks, const glm::vec3& Ka, float shininess) {
-
-    glm::vec3 returnedColor(0.0f);
-
-    glm::vec3 normal = glm::normalize(pointNormal);
-    glm::vec3 lightDir = glm::normalize(lightPos - point);
-
-    // cos of angle between light direction and normal
-    float NdotL = glm::dot(normal, lightDir);
-
-    /*******
-    Diffusive Lighting: max between 0 (back of the surface so no light) and NdotL
-    ********/
-    float diffusiveLight = glm::max(NdotL, 0.0f);
-    returnedColor += diffusiveLight * Kd;
-
-    /*******
-    Specular Lighting
-    ********/
-    // if light is in front of object calculate specular light
-    if (NdotL >= 0) {
-        // Calculate reflection vector R, where the light ray bounces to
-        glm::vec3 specularR = glm::normalize(2.0f * NdotL * normal - lightDir);
-
-        // Direction vector of eye - from intersection point to camera
-        glm::vec3 specularV = glm::normalize(-point);
-
-        // if returned ray and eye direction are opposite to each other take max
-        float RdotV = glm::max(glm::dot(specularR, specularV), 0.0f);
-
-        // Adding shininess factor - how concentrated is the shine
-        float specularLight = glm::pow(RdotV, shininess);
-        returnedColor += specularLight * Ks;
-    }
-
-    /*******
-    Ambient Lighting: constant light that is always present
-    ********/
-    returnedColor += Ka;
-
-    return returnedColor;
 }

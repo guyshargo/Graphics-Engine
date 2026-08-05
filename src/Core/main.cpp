@@ -74,12 +74,12 @@ int main() {
     std::shuffle(pixelIndices.begin(), pixelIndices.end(), g);
 
     RayTracerWorld rayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
-    bool isLoaded = rayTracerWorld.load(params.getModelFileName()); 
+    bool isLoaded = rayTracerWorld.load(params.getRtModelFileName()); 
     rayTracerWorld.setRenderingParams(params.getDepthOfRayTracing());
-    rayTracerWorld.setExercise(params.getExercise());
+    rayTracerWorld.setExercise(params.getRtExercise());
 
     // UI Data
-    int selectedExercise = static_cast<int>(params.getExercise());
+    int selectedExercise = static_cast<int>(params.getRtExercise());
 
     // Main Loop
     bool isRunning = true;
@@ -105,8 +105,8 @@ int main() {
         if (ImGui::Button("Open Model File...")) {
             std::string newPath = OpenFileDialog();
             if (!newPath.empty()) {
-                params.setModelFileName(newPath);
-                isLoaded = rayTracerWorld.load(params.getModelFileName());
+                params.setRtModelFileName(newPath);
+                isLoaded = rayTracerWorld.load(params.getRtModelFileName());
                 
                 // Reset rendering state
                 currentIndex = 0;
@@ -116,7 +116,7 @@ int main() {
         }
         
         // Show current file
-        ImGui::TextWrapped("Model: %s", params.getModelFileName().c_str());
+        ImGui::TextWrapped("Model: %s", params.getRtModelFileName().c_str());
         ImGui::Separator();
 
         // 2. Exercise Selection Dropdown (Powered by magic_enum)
@@ -133,8 +133,8 @@ int main() {
                 
                 if (ImGui::Selectable(itemName.c_str(), isSelected)) {
                     selectedExercise = static_cast<int>(val);
-                    params.setExercise(static_cast<RayTracingExerciseEnum>(selectedExercise));
-                    rayTracerWorld.setExercise(params.getExercise());
+                    params.setRtExercise(static_cast<RayTracingExerciseEnum>(selectedExercise));
+                    rayTracerWorld.setExercise(params.getRtExercise());
                     
                     // Reset rendering state
                     currentIndex = 0;

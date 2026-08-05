@@ -10,8 +10,13 @@ namespace DefaultParams {
     constexpr int SIZE_OF_UPPER_INTERFACE_ROW_IN_PIXELS = 40;
     constexpr int DEPTH_OF_RAY_TRACING = 6;
 
-    // String literals
-    inline const std::string MODEL_FILE_NAME = "./Models/ex_02___skybox_with_direction_labels.model";
-    inline const std::string MODEL_OPEN_OBJ_PATH = "./Models/";
+    // String literals - Ray Tracer
+    inline const std::string RT_MODEL_FILE_NAME = "./RT_Models/ex_02___skybox_with_direction_labels.model";
+    inline const std::string RT_MODEL_OPEN_OBJ_PATH = "./RT_Models/";
+
+    // String literals - Rasterizer
+    inline const std::string RAST_MODEL_FILE_NAME = "./RAST_Models/models_with_textures/sheep.obj"; 
+    inline const std::string RAST_MODEL_OPEN_OBJ_PATH = "./RAST_Models/";
+
     inline const std::string SAVE_IMAGE_PATH = "./";
 }
