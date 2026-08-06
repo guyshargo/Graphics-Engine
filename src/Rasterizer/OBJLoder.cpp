@@ -29,7 +29,7 @@ glm::vec3 OBJLoader::getBoundingBoxCenter() const {
 
 void OBJLoader::loadOBJ(const std::string& filePath) {
     tinyobj::ObjReaderConfig reader_config;
-    reader_config.triangulate = true; // Mirrors ObjUtils.triangulate(obj)
+    reader_config.triangulate = true;
 
     tinyobj::ObjReader reader;
     if (!reader.ParseFromFile(filePath, reader_config)) {
@@ -66,7 +66,7 @@ void OBJLoader::loadOBJ(const std::string& filePath) {
                     attrib.vertices[3 * size_t(idx.vertex_index) + 2]
                 );
 
-                // Bounding box tracking mirroring Java
+                // Bounding box tracking
                 if (position.x < minPositionX) minPositionX = position.x;
                 if (position.x > maxPositionX) maxPositionX = position.x;
                 if (position.y < minPositionY) minPositionY = position.y;
@@ -91,7 +91,7 @@ void OBJLoader::loadOBJ(const std::string& filePath) {
                     );
                 }
 
-                // Vertex deduplication key mirroring Java
+                // Vertex deduplication key
                 std::string key = std::to_string(position.x) + "_" + std::to_string(position.y) + "_" + std::to_string(position.z) + "_" +
                                   std::to_string(normal.x) + "_" + std::to_string(normal.y) + "_" + std::to_string(normal.z) + "_" +
                                   std::to_string(texCoord.x) + "_" + std::to_string(texCoord.y);
@@ -121,7 +121,7 @@ void OBJLoader::loadOBJ(const std::string& filePath) {
             }
             index_offset += 3;
 
-            // Pack local indices into std::array for your TriangleFace
+            // Pack local indices into std::array TriangleFace
             std::array<int, 3> indexArray = {indices[0], indices[1], indices[2]};
             glm::vec3 faceColor(dist(rng), dist(rng), dist(rng));
             glm::vec3 faceNormal(0.0f); 
@@ -141,13 +141,6 @@ void OBJLoader::loadOBJ(const std::string& filePath) {
         } else {
             calculatePlanarMapping();
         }
-    }
-
-    // Mirroring texture path deduction
-    size_t lastDot = filePath.find_last_of('.');
-    if (lastDot != std::string::npos) {
-        textureFilePath = filePath.substr(0, lastDot + 1) + "bmp";
-        std::cout << "Texture path inferred as: " << textureFilePath << std::endl;
     }
 }
 
