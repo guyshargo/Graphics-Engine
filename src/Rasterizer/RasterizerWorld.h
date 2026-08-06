@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <random>
 #include <functional>
 #include <glm/glm.hpp>
 
@@ -48,8 +47,10 @@ public:
     
     std::vector<float> zBuffer;
 
-    // random object
-    std::mt19937 rand_engine{std::random_device{}()};
+    // Camera Controls
+    void zoomCamera(float scrollDelta);
+    void rotateCamera(float deltaX, float deltaY);
+    void panCamera(float deltaX, float deltaY);
     
 private:
     int imageWidth;

@@ -4,7 +4,7 @@
 BarycentricCoordinates::BarycentricCoordinates(const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3) {
     lineOppositeToV1 = lineFromTwoPoints(v2, v3);
     lineOppositeToV2 = lineFromTwoPoints(v1, v3);
-    lineOppositeToV3 = lineFromTwoPoints(v2, v3);
+    lineOppositeToV3 = lineFromTwoPoints(v1, v2);
 
     d1 = semiDistanceOfPointFromLine(lineOppositeToV1, v1);
     d2 = semiDistanceOfPointFromLine(lineOppositeToV2, v2);
@@ -34,7 +34,7 @@ bool BarycentricCoordinates::isPointInsideTriangle() const {
 
 std::string BarycentricCoordinates::toString() const {
     char buffer[128];
-    snprintf(buffer, sizeof(buffer), "Alpha: %.2f", "Beta: %.2f", "Gamma: %.2f", getAlpha(), getBeta(), getGamma());
+    snprintf(buffer, sizeof(buffer), "Alpha: %.2f, Beta: %.2f, Gamma: %.2f", getAlpha(), getBeta(), getGamma());
     return std::string (buffer);
 }
 

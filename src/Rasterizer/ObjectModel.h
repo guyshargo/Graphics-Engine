@@ -49,6 +49,10 @@ private:
 
     std::vector<VertexData> verticesData;
     std::vector<TriangleFace> faces;
+
+    std::vector<glm::vec3> textureData;
+    int textureWidth = 0;
+    int textureHeight = 0;
     
     TextureGetPixel textureGetPixel;
     TextureGetDimension textureGetWidth;

@@ -44,6 +44,51 @@ bool ObjectModel::load(const std::string& fileName) {
         faces = objLoader.getFaces();
         boundingBoxDimensions = objLoader.getBoundingBoxDimensions();
         boundingBoxCenter = objLoader.getBoundingBoxCenter();
+        
+        // --- Load Companion Texture Directly into ObjectModel ---
+        size_t lastDot = fileName.find_last_of('.');
+        if (lastDot != std::string::npos) {
+            std::string texPath = fileName.substr(0, lastDot) + ".bmp";
+            SDL_Surface* surf = SDL_LoadBMP(texPath.c_str());
+            
+            if (surf) {
+                SDL_Surface* formatted = SDL_ConvertSurfaceFormat(surf, SDL_PIXELFORMAT_ARGB8888, 0);
+                SDL_FreeSurface(surf);
+                
+                if (formatted) {
+                    textureWidth = formatted->w;
+                    textureHeight = formatted->h;
+                    textureData.resize(textureWidth * textureHeight);
+                    
+                    uint32_t* pixels = static_cast<uint32_t*>(formatted->pixels);
+                    int pitch = formatted->pitch / 4;
+                    
+                    for (int y = 0; y < textureHeight; ++y) {
+                        for (int x = 0; x < textureWidth; ++x) {
+                            uint32_t argb = pixels[y * pitch + x];
+                            float r = static_cast<float>((argb >> 16) & 0xFF) / 255.0f;
+                            float g = static_cast<float>((argb >> 8) & 0xFF) / 255.0f;
+                            float b = static_cast<float>(argb & 0xFF) / 255.0f;
+                            textureData[y * textureWidth + x] = glm::vec3(r, g, b);
+                        }
+                    }
+                    SDL_FreeSurface(formatted);
+                    
+                    // Bind callbacks to this ObjectModel's own memory
+                    setTextureCallbacks(
+                        [this](int x, int y) {
+                            int wrapX = ((x % textureWidth) + textureWidth) % textureWidth;
+                            int wrapY = ((y % textureHeight) + textureHeight) % textureHeight;
+                            wrapY = textureHeight - 1 - wrapY;
+                            return textureData[wrapY * textureWidth + wrapX];
+                        },
+                        [this]() { return textureWidth; },
+                        [this]() { return textureHeight; }
+                    );
+                }
+            }
+        }
+
         return true;
 
     } catch (const std::exception& e) {
@@ -111,6 +156,7 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
 
     // viewport transform to pixels: window coordinates
     homoPointObj = viewportM * homoPointObj;
+    vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
 
     // transformation normal from object coordinates to eye coordinates v->normal
     transformNormalFromObjectCoordToEyeCoordAndDrawIt(setPixel, vertex);
@@ -215,31 +261,66 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
 
                         } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
                             // pixel light intensity with interpolation with vertices
-                            float interpolatedLight = bc.interpolate(vertex1.lightingIntensity0to1, vertex2.lightingIntensity0to1, 
+                            float interpolatedLight = bc.interpolate(vertex1.lightingIntensity0to1,
+                                                                     vertex2.lightingIntensity0to1, 
                                                                      vertex3.lightingIntensity0to1);
+
                             fragmentData.pixelIntensity0to1 = interpolatedLight;
 
                         } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
                             // interpolation of point and normal in eye coordinates
-                            glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, vertex2.pointEyeCoordinates,
+                            glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, 
+                                                                            vertex2.pointEyeCoordinates,
                                                                             vertex3.pointEyeCoordinates);
-                            glm::vec3 interpolatedEyeNormal = bc.interpolate(vertex1.normalEyeCoordinates, vertex2.normalEyeCoordinates,
-                                                                            vertex3.normalEyeCoordinates);
+
+                            glm::vec3 interpolatedEyeNormal = bc.interpolate(vertex1.normalEyeCoordinates, 
+                                                                             vertex2.normalEyeCoordinates,
+                                                                             vertex3.normalEyeCoordinates);
                             
                             fragmentData.pointEyeCoordinates = interpolatedEyePoint;
                             fragmentData.normalEyeCoordinates = interpolatedEyeNormal;
                         
                         } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE) {
+
+                            if (!hasTexture) {
+                                // No texture available
+                                glm::vec3 magenta(1.0f, 0.0f, 1.0f);
+                                setPixel(x, y, magenta);
+                                rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
+                                continue;
+                            }
+                            
                             // texture coordinates interpolation
-                            glm::vec2 interpolatedTexture = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates,
+                            glm::vec2 interpolatedTexture = bc.interpolate(vertex1.textureCoordinates,
+                                                                            vertex2.textureCoordinates,
                                                                             vertex3.textureCoordinates);
-                                                    
+                            
+                            fragmentData.textureCoordinates = interpolatedTexture;
+
+                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+
+                            if (!hasTexture) {
+                                // No texture available
+                                glm::vec3 magenta(1.0f, 0.0f, 1.0f);
+                                setPixel(x, y, magenta);
+                                rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
+                                continue;
+                            }
+
+                            // texture coordinates interpolation
+                            glm::vec2 interpolatedTexture = bc.interpolate(vertex1.textureCoordinates, 
+                                                                           vertex2.textureCoordinates,
+                                                                           vertex3.textureCoordinates);
+                            
                             fragmentData.textureCoordinates = interpolatedTexture;
 
                             // interpolation of phong lighting
-                            glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, vertex2.pointEyeCoordinates,
+                            glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, 
+                                                                            vertex2.pointEyeCoordinates,
                                                                             vertex3.pointEyeCoordinates);
-                            glm::vec3 interpolatedEyeNormal = bc.interpolate(vertex1.normalEyeCoordinates, vertex2.normalEyeCoordinates,
+
+                            glm::vec3 interpolatedEyeNormal = bc.interpolate(vertex1.normalEyeCoordinates, 
+                                                                            vertex2.normalEyeCoordinates,
                                                                             vertex3.normalEyeCoordinates);
                             
                             fragmentData.pointEyeCoordinates = interpolatedEyePoint;
@@ -279,11 +360,11 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
         // calculate light for every pixel with its unique location and normal
         float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
-                                                lightPositionEyeCoordinates,
-                                                rasterizerWorld -> lighting_Diffuse,
-                                                rasterizerWorld -> lighting_Specular,
-                                                rasterizerWorld -> lighting_Ambient,
-                                                rasterizerWorld -> lighting_sHininess);
+                                                        lightPositionEyeCoordinates,
+                                                        rasterizerWorld -> lighting_Diffuse,
+                                                        rasterizerWorld -> lighting_Specular,
+                                                        rasterizerWorld -> lighting_Ambient,
+                                                        rasterizerWorld -> lighting_sHininess);
 
         return glm::vec3(pixelLighting);
 
@@ -326,9 +407,9 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 void ObjectModel::drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
 
     int x1round = static_cast<int>(std::round(p1.x));
-    int x2round = static_cast<int>(std::round(p1.x));
-    int y1round = static_cast<int>(std::round(p1.x));
-    int y2round = static_cast<int>(std::round(p1.x));
+    int x2round = static_cast<int>(std::round(p2.x));
+    int y1round = static_cast<int>(std::round(p1.y));
+    int y2round = static_cast<int>(std::round(p2.y));
 
     int dx = x2round - x1round;
     int dy = y2round - y1round;

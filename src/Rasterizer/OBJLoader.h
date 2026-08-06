@@ -4,6 +4,8 @@
 #include <vector>
 #include <limits>
 #include <glm/glm.hpp>
+#include <SDL.h>
+
 #include "VertexData.h"
 #include "TriangleFace.h"
 
