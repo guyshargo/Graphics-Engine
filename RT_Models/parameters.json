@@ -1,8 +1,0 @@
-{
-    "depthOfRayTracing": 6,
-    "rastExercise": 0,
-    "rastModelFileName": "./RAST_Models/models_with_textures/sheep.obj",
-    "rtExercise": 0,
-    "rtModelFileName": "C:\\Users\\sharg\\OneDrive\\Documents\\GitHub\\Graphics-Engine\\RT_Models\\ex_08___4SpheresFromFewMaterials.model",
-    "saveImagePath": "./"
-}

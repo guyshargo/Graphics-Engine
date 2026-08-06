@@ -128,46 +128,17 @@ namespace Utilities {
         return ""; 
     }
 
-    std::string saveFileChooser(const std::string& fileExtension, const std::string& initialDirectory) {
-        OPENFILENAMEA ofn;
-        CHAR szFile[MAX_PATH] = { 0 };
-
-        // Set up the default filename "untitled.ext"
-        std::string defaultName = "untitled." + fileExtension;
-        strncpy_s(szFile, defaultName.c_str(), sizeof(szFile) - 1);
-
-        std::vector<char> filter = createWin32Filter(fileExtension);
-
-        ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
-        ofn.lStructSize = sizeof(OPENFILENAMEA);
-        ofn.hwndOwner = NULL; 
-        ofn.lpstrFile = szFile;
-        ofn.nMaxFile = sizeof(szFile);
-        ofn.lpstrFilter = filter.data();
-        ofn.nFilterIndex = 1;
-        ofn.lpstrFileTitle = NULL;
-        ofn.nMaxFileTitle = 0;
-        ofn.lpstrDefExt = fileExtension.c_str(); // Auto-appends extension if user forgets
-        
-        if (!initialDirectory.empty()) {
-            ofn.lpstrInitialDir = initialDirectory.c_str();
-        }
-
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
-
-        if (GetSaveFileNameA(&ofn) == TRUE) {
-            return std::string(ofn.lpstrFile);
-        }
-
-        return "";
-    }
-
     std::string getRelativePath(const std::string& absolutePath) {
         std::filesystem::path currentDir = std::filesystem::current_path();
         std::filesystem::path file(absolutePath);
         
         // Remove the current directory path to get the relative path
-        return std::filesystem::relative(file, currentDir).string();
+        std::string relPath = std::filesystem::relative(file, currentDir).string();
+        
+        // Standardize slashes for cross-platform and JSON safety
+        std::replace(relPath.begin(), relPath.end(), '\\', '/');
+
+        return relPath;
     }
 
     // ==========================================
