@@ -21,7 +21,6 @@ private:
     void setDefaultParams() {
         rtModelFileName = DefaultParams::RT_MODEL_FILE_NAME;
         rastModelFileName = DefaultParams::RAST_MODEL_FILE_NAME;
-        saveImagePath = DefaultParams::SAVE_IMAGE_PATH;
         depthOfRayTracing = DefaultParams::DEPTH_OF_RAY_TRACING;
         rtExercise = static_cast<RayTracingExerciseEnum>(0); 
         rastExercise = static_cast<RasterizationExerciseEnum>(0); 
@@ -37,7 +36,6 @@ private:
             
             rtModelFileName = j.value("rtModelFileName", DefaultParams::RT_MODEL_FILE_NAME);
             rastModelFileName = j.value("rastModelFileName", DefaultParams::RAST_MODEL_FILE_NAME);
-            saveImagePath = j.value("saveImagePath", DefaultParams::SAVE_IMAGE_PATH);
             depthOfRayTracing = j.value("depthOfRayTracing", DefaultParams::DEPTH_OF_RAY_TRACING);
             
             rtExercise = static_cast<RayTracingExerciseEnum>(j.value("rtExercise", 0)); 
@@ -65,7 +63,6 @@ public:
         json j;
         j["rtModelFileName"] = rtModelFileName;
         j["rastModelFileName"] = rastModelFileName;
-        j["saveImagePath"] = saveImagePath;
         j["depthOfRayTracing"] = depthOfRayTracing;
         j["rtExercise"] = static_cast<int>(rtExercise); 
         j["rastExercise"] = static_cast<int>(rastExercise);

@@ -18,25 +18,7 @@
 #include "SavedParams.h"
 #include "DefaultParams.h"
 #include "ExerciseEnum.h"
-
-// Helper function to open a native Windows file dialog
-std::string OpenFileDialog() {
-    char filename[MAX_PATH] = "";
-    OPENFILENAMEA ofn;
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = NULL;
-    ofn.lpstrFilter = "Model Files (*.model;*.txt)\0*.model;*.txt\0All Files (*.*)\0*.*\0";
-    ofn.lpstrFile = filename;
-    ofn.nMaxFile = MAX_PATH;
-    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-    ofn.lpstrDefExt = "model";
-
-    if (GetOpenFileNameA(&ofn)) {
-        return std::string(filename);
-    }
-    return "";
-}
+#include "Utilities.h"
 
 int main() {
     SavedParams params;
@@ -103,9 +85,17 @@ int main() {
         
         // 1. Load Model Button
         if (ImGui::Button("Open Model File...")) {
-            std::string newPath = OpenFileDialog();
+
+            // Passing "model" as the extension and an empty string "" to let Windows use the last visited directory
+            std::string newPath = Utilities::openFileChooser("model", "");
+
             if (!newPath.empty()) {
-                params.setRtModelFileName(newPath);
+
+                // Convert the Windows path into a safe relative path
+                std::string relativePath = Utilities::getRelativePath(newPath);
+
+                // Save the relative path to parameters.json
+                params.setRtModelFileName(relativePath);
                 isLoaded = rayTracerWorld.load(params.getRtModelFileName());
                 
                 // Reset rendering state
