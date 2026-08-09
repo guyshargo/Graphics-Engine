@@ -26,6 +26,11 @@ namespace Utilities {
     std::string getRelativePath(const std::string& absolutePath);
 
     // ==========================================
+    // Shared memory writing logic
+    // ==========================================
+    void WriteColorToBuffer(std::vector<uint32_t>& buffer, int x, int y, const glm::vec3& color, int imageWidth, int imageHeight);
+
+    // ==========================================
     // Math Utilities
     // ==========================================
     glm::vec3 lightingEquation(const glm::vec3& point, const glm::vec3& pointNormal, const glm::vec3& lightPos, 

@@ -4,6 +4,7 @@
 #include <numeric>
 #include <random>
 #include <algorithm>
+#include <execution>
 #include <windows.h> // For the File Open Dialog
 #include <SDL.h>
 #include <glm/glm.hpp>
@@ -19,11 +20,7 @@
 #include "DefaultParams.h"
 #include "ExerciseEnum.h"
 #include "Utilities.h"
-
-enum class EngineMode {
-    RAY_TRACING,
-    RASTERIZATION
-};
+#include "RenderCallbacks.h"
 
 int main() {
     SavedParams params;
@@ -57,13 +54,19 @@ int main() {
 
     std::vector<uint32_t> pixelBuffer(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT, 0xFF323232);
 
-    // --- Ray Tracer Setup ---
+    // --- Setting boudaries of frame to draw
     std::vector<int> pixelIndices(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT);
     std::iota(pixelIndices.begin(), pixelIndices.end(), 0);
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(pixelIndices.begin(), pixelIndices.end(), g);
 
+    // --- Randomizing pixels order to color ---
+    // Provides a random seed
+    std::random_device randomSeed;
+    // Uses seed to create a pseudo-random generator
+    std::mt19937 pixelOrderGenerator(randomSeed());
+    // Uses generator to shuffle pixels order
+    std::shuffle(pixelIndices.begin(), pixelIndices.end(), pixelOrderGenerator);
+
+    // --- Ray Tracer Setup ---
     RayTracerWorld rayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
     bool isRtLoaded = rayTracerWorld.load(params.getRtModelFileName()); 
     rayTracerWorld.setRenderingParams(params.getDepthOfRayTracing());
@@ -95,25 +98,14 @@ int main() {
     rasterizerWorld.displayType = params.getDisplayType();
     rasterizerWorld.displayNormals = params.isDisplayNormals();
 
-    // Rasterizer Callbacks
-    auto clearImage = [&pixelBuffer]() {
-        std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF323232);
-    };
-
-    auto setPixel = [&pixelBuffer](int x, int y, const glm::vec3& color) {
-        if (x < 0 || x >= DefaultParams::IMAGE_WIDTH || y < 0 || y >= DefaultParams::IMAGE_HEIGHT) return;
-        
-        uint8_t r = static_cast<uint8_t>(std::clamp(color.r * 255.0f, 0.0f, 255.0f));
-        uint8_t g_c = static_cast<uint8_t>(std::clamp(color.g * 255.0f, 0.0f, 255.0f));
-        uint8_t b = static_cast<uint8_t>(std::clamp(color.b * 255.0f, 0.0f, 255.0f));
-        
-        int flipped_y = DefaultParams::IMAGE_HEIGHT - 1 - y;
-        pixelBuffer[flipped_y * DefaultParams::IMAGE_WIDTH + x] = (0xFF << 24) | (r << 16) | (g_c << 8) | b;
-    };
+    // Initiate render callbacks
+    ImageClearer clearImage(pixelBuffer);
+    PixelSetter setPixel(pixelBuffer);
+    PixelRenderer rendererTask(pixelBuffer, rayTracerWorld);
 
     // Main Loop
     bool isRunning = true;
-    size_t currentIndex = 0;
+    size_t currentPixelIndex = 0;
     const size_t PIXELS_PER_FRAME = 5000;
 
     while (isRunning) {
@@ -122,7 +114,7 @@ int main() {
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT) isRunning = false;
 
-            // --- Camera Hook ---
+            // --- Camera-Mouse Moevment Hook ---
             // Only process camera inputs if in Rasterization mode and ImGui isn't using the mouse
             if (currentMode == EngineMode::RASTERIZATION && !ImGui::GetIO().WantCaptureMouse) {
                 
@@ -240,9 +232,11 @@ int main() {
         // --- Event Execution & Rendering ---
         if (needsRedraw) {
             if (currentMode == EngineMode::RAY_TRACING) {
-                currentIndex = 0;
+                currentPixelIndex = 0;
+                // Reset the image before starting a new ray-tracing render
                 std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF323232);
-                std::shuffle(pixelIndices.begin(), pixelIndices.end(), g);
+                // Randomize which pixels are rendered first
+                std::shuffle(pixelIndices.begin(), pixelIndices.end(), pixelOrderGenerator);
                 needsRedraw = false; 
             } else {
                 clearImage();
@@ -254,23 +248,20 @@ int main() {
             }
         }
 
-        // Ray Tracing Processing (Iterative)
-        if (currentMode == EngineMode::RAY_TRACING && isRtLoaded && currentIndex < pixelIndices.size()) {
-            size_t end = std::min(currentIndex + PIXELS_PER_FRAME, pixelIndices.size());
-            for (; currentIndex < end; ++currentIndex) {
-                int idx = pixelIndices[currentIndex];
-                int x = idx % DefaultParams::IMAGE_WIDTH;
-                int y = idx / DefaultParams::IMAGE_WIDTH;
+        // Ray Tracing Processing (Iterative & Parallelized)
+        if (currentMode == EngineMode::RAY_TRACING && isRtLoaded && currentPixelIndex < pixelIndices.size()) {
+            size_t endPixelIndex = std::min(currentPixelIndex + PIXELS_PER_FRAME, pixelIndices.size());
 
-                glm::vec3 color = rayTracerWorld.renderPixel(x, y);
-                
-                uint8_t r = static_cast<uint8_t>(std::clamp(color.r * 255.0f, 0.0f, 255.0f));
-                uint8_t g_c = static_cast<uint8_t>(std::clamp(color.g * 255.0f, 0.0f, 255.0f));
-                uint8_t b = static_cast<uint8_t>(std::clamp(color.b * 255.0f, 0.0f, 255.0f));
-                
-                int flipped_y = DefaultParams::IMAGE_HEIGHT - 1 - y;
-                pixelBuffer[flipped_y * DefaultParams::IMAGE_WIDTH + x] = (0xFF << 24) | (r << 16) | (g_c << 8) | b;
-            }
+            // Instantiate the functor with your local variables
+            PixelRenderer rendererTask(pixelBuffer, rayTracerWorld);
+
+            // Pass the functor directly to std::for_each
+            std::for_each(std::execution::par, 
+                          pixelIndices.begin() + currentPixelIndex, 
+                          pixelIndices.begin() + endPixelIndex, 
+                          rendererTask);
+            
+            currentPixelIndex = endPixelIndex;
             SDL_UpdateTexture(texture, nullptr, pixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
         }
 

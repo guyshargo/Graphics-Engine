@@ -1,6 +1,11 @@
 #pragma once
 #include <magic_enum.hpp>
 
+enum class EngineMode {
+    RAY_TRACING,
+    RASTERIZATION
+};
+
 enum class RayTracingExerciseEnum {
     EX_2_Rays_calculation,
     EX_3_1_Intersection_One_sphere,
