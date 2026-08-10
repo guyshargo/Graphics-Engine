@@ -18,10 +18,17 @@ RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree
 RayTracerWorld::~RayTracerWorld() = default;
 
 
-void RayTracerWorld::setRenderingParams(int depthOfRayTracing) {
+void RayTracerWorld::setDepthOfRayTracing(int depthOfRayTracing) {
     params.setDepthOfRayTracing(depthOfRayTracing);
 }
 
+void RayTracerWorld::setAntialiasingSamples(int antialiasingSamples) {
+    params.setAntialiasingSamples(antialiasingSamples);
+}
+
+void RayTracerWorld::setSoftShadowSamples(int softShadowSamples) {
+    params.setSoftShadowSamples(softShadowSamples);
+}
 
 void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
     params.setRtExercise(exercise);
@@ -54,34 +61,35 @@ bool RayTracerWorld::load(const std::string& filename) {
 
 glm::vec3 RayTracerWorld::renderPixel(int x, int y) {
 
-    int numSamples = 16;
-    float minSubPixelRange_val = -0.5f;
-    float maxSubPixelRange_val = 0.5f;
-
-    std::random_device rd;
-    std::mt19937 generator(rd());
-    std::uniform_real_distribution<float> subPixels(minSubPixelRange_val, maxSubPixelRange_val);
-
-    glm::vec3 accumulatedPixelColor(0.0f);
-
     if (!model || !skyBoxImageSphereTexture) {
-        return accumulatedPixelColor; // Is initialized to black
+        return glm::vec3(0.0f); // Return black when the scene is not loaded
     }
 
-    for (int i = 0; i < numSamples; i++) {
+    // Accumulate the color returned by each sampled ray
+    glm::vec3 accumulatedPixelColor(0.0f);
+
+    thread_local std::random_device rd;
+    thread_local std::mt19937 generator(rd());
+    // Generate offset from the pixel center for each sample
+    std::uniform_real_distribution<float> subPixels(DefaultParams::MIN_SUBPIXELS_RANGE, DefaultParams::MAX_SUBPIXELS_RANGE);
+    
+    int antialiasingSamples = params.getAntialiasingSamples();
+
+    for (int i = 0; i < antialiasingSamples; i++) {
         float deltaX = x + subPixels(generator);
         float deltaY = y + subPixels(generator);
 
+        // Generate and trace a ray through a sample's subpixel position
         glm::vec3 pixelDirection = calcPixelDirection(deltaX, deltaY, imageWidth, imageHeight, model->fovXdegree);
 
-        // Camera position is (0,0,0) with calculated direction vector
+        // Camera position is (0,0,0) with calculated direction vector of sample
         glm::vec3 pixelColor = rayTracing(glm::vec3(0.0f), pixelDirection, *model, *skyBoxImageSphereTexture, 0);
 
         accumulatedPixelColor += pixelColor;
     }
     
-    
-    return accumulatedPixelColor /= numSamples;
+    // Average the samples for the final antialiased pixel color
+    return accumulatedPixelColor /= antialiasingSamples;
 }
 
 
@@ -116,31 +124,27 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     float kColor = intersectedSphereMaterial.kColor;
     returnedColor += kColor * color;
 
-    // Shadow
-    bool isShadow = false;
-    if (params.getRtExercise() >= RayTracingExerciseEnum::EX_6_Shadow) {
-        isShadow = isPointInShadow(model.lights[0].location, intersectionPoint, intersectionNormal, model);
-    }
-
     /** 
      * lighting
      **/
-    glm::vec3 directLighting(0.0f);
 
-    if (!isShadow) {
-        // Kd with texture
-        glm::vec3 combinedKd = calcKdCombinedWithTexture(intersectionPoint, intersectedSphere->center, intersectedSphereTexture,
-                                                         intersectedSphereMaterial.kd, intersectedSphereMaterial.kTexture);
+    // Kd with texture
+    glm::vec3 combinedKd = calcKdCombinedWithTexture(intersectionPoint, intersectedSphere->center, intersectedSphereTexture,
+                                                        intersectedSphereMaterial.kd, intersectedSphereMaterial.kTexture);
 
-        // 3 light types calculated to one vector
-        directLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
-            combinedKd, intersectedSphereMaterial.ks, intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
-    }
-    // if its shadowed - kd and ks are 0
-    else {
-        directLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
-            glm::vec3(0.0f), glm::vec3(0.0f), intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
-    }
+    // Calculate diffuse, specular, and ambient lighting without shadows
+    glm::vec3 fullLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+        combinedKd, intersectedSphereMaterial.ks, intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
+
+    // Calculate only the ambient light so shadowed surfaces retain it
+    glm::vec3 ambientLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+                                glm::vec3(0.0f), glm::vec3(0.0f), intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
+
+    // Calculate the fraction of sampled light rays blocked by geometry
+    float shadowFactor = isPointInShadow(model.lights[0].location, intersectionPoint, intersectionNormal, model);
+
+    // Linear interpolation (mix) between full lighting and ambient-only lighting based on shadow factor
+    glm::vec3 directLighting = glm::mix(fullLighting, ambientLighting, shadowFactor);
 
     // adding lighting scaled by kDirect to returnedColor
     returnedColor += intersectedSphereMaterial.kDirect * directLighting;
@@ -260,19 +264,64 @@ glm::vec3 RayTracerWorld::calcKdCombinedWithTexture(glm::vec3 intersectionPoint,
 
 
 
-bool RayTracerWorld::isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) const {
+float RayTracerWorld::isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) const {
 
-    // Vector from point to light source to check if is being intersected along the way
-    glm::vec3 shadowRay = glm::normalize(lightLocation - point);
+    int blockedRays = 0;
+    float lightRadius = model.lights[0].radius;
+    int shadowSamples = params.getSoftShadowSamples();
 
-    // adjusting point on model by 0.05 in normal direction
-    glm::vec3 outsideOfObjectPoint = point + 0.05f * pointNormal;
+    thread_local std::random_device rd;
+    thread_local std::mt19937 generator(rd());
+    // Generate offset from the pixel center for each sample
+    std::uniform_real_distribution<float> subPixels(0.0f, 1.0f);
 
-    // check collision with other spheres along shadowRay
-    std::optional<IntersectionResults> isCollision = rayIntersectionBVH(bvhRoot.get(), outsideOfObjectPoint, shadowRay);
+    // --- Constructing 3D orientation of light blocking disk ---
 
-    // Return true if the point is in shadow, false otherwise
-    return isCollision.has_value();
+    // W: Direction from light to the intersection point
+    glm::vec3 forwardW_axis = glm::normalize(point - lightLocation);
+
+    // Choose an arbitrary up vector
+    // If W is too close to the Y-axis, use the X-axis instead to prevent a zero cross product
+    glm::vec3 arbitraryUp = (std::abs(forwardW_axis.y) > 0.999f) ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+
+    // U and V: The perpendicular axes representing the disk's 2D plane
+    glm::vec3 rightU_axis = glm::normalize(glm::cross(arbitraryUp, forwardW_axis));
+    glm::vec3 upV_axis = glm::cross(forwardW_axis, rightU_axis);
+
+    for (int i = 0; i < shadowSamples; i++) {
+
+        float r = lightRadius * std::sqrt(subPixels(generator));
+        float theta = 2.0f * glm::pi<float>() * subPixels(generator);
+
+        float rX = r * std::cos(theta);
+        float rY = r * std::sin(theta);
+
+        // Calculate final 3D point on the disk
+        glm::vec3 shadowRayOrigin = rX * rightU_axis + rY * upV_axis + lightLocation;
+
+        // The shadow ray you will cast to test for occlusion
+        glm::vec3 shadowRayDirection = glm::normalize(shadowRayOrigin - point);
+
+        // adjusting point on model by 0.05 in normal direction
+        glm::vec3 outsideOfObjectPoint = point + 0.05f * pointNormal;
+
+        // check collision with other spheres along shadowRay
+        std::optional<IntersectionResults> isCollision = rayIntersectionBVH(bvhRoot.get(), outsideOfObjectPoint, shadowRayDirection);
+
+        if (isCollision.has_value()) {
+            // Calculate distances to ensure the blocking object is actually between the surface and the light
+            float distanceToLight = glm::length(shadowRayOrigin - outsideOfObjectPoint);
+            float distanceToHit = glm::length(isCollision->intersectionPoint - outsideOfObjectPoint);
+            
+            // Only count the ray as blocked if the object is closer than the light
+            if (distanceToHit < distanceToLight) {
+                blockedRays++;
+            }
+        }
+    }
+
+    float shadowFactor = static_cast<float>(blockedRays) / static_cast<float>(shadowSamples);
+    return shadowFactor;
 
 }
 

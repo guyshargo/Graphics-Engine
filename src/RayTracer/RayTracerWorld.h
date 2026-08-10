@@ -10,19 +10,29 @@
 
 class Model;
 
+/**
+ * @brief Spherical bounds used to enclose one or more model spheres in the BVH
+ */
 struct BoundingSphere {
     glm::vec3 center{0.0f, 0.0f, 0.0f};
     float radius{0.0f};
 };
 
+/**
+ * @brief Node in the bounding volume hierarchy used to accelerate ray intersections
+ */
 struct BVHNode {
     BoundingSphere bounds;
     std::unique_ptr<BVHNode> left;
     std::unique_ptr<BVHNode> right;
     
-    // Only populated if this is a leaf node
+    //Model spheres stored by a leaf node. internal nodes leave this empty
     std::vector<const ModelSphere*> leafSpheres; 
 
+    /**
+     * @brief Determines whether this node is a leaf
+     * @return true when the node has no child nodes, otherwise false
+     */
     bool isLeaf() const { return left == nullptr && right == nullptr; }
 };
 
@@ -46,13 +56,26 @@ class RayTracerWorld {
 
 
         /**
-         * @brief Sets the depth limit for recursive ray tracing operations
+         * @brief Gets the currently loaded ray-tracing model
+         *
+         * @return A pointer to the loaded Model, or nullptr if no model has been loaded
+         */
+        Model* getModel() { return model.get(); }
+
+
+        /**
+         * @brief Sets the rendering parameters used by the ray tracer
          *
          * @param depthOfRayTracing The maximum number of recursive ray bounces allowed
+         * @param antialiasingSamples The number of randomly sampled rays used per pixel
+         * @param softShadowSamples The number of sampled light rays used to estimate soft shadows
+         * @param exercise The ray-tracing exercise that determines which rendering features are enabled
          */
-        void setRenderingParams(int depthOfRayTracing);
+        void setDepthOfRayTracing(int depthOfRayTracing);
 
+        void setAntialiasingSamples(int antialiasingSamples);
 
+        void setSoftShadowSamples(int softShadowSamples);
                 
         /**
          * @brief Sets the current ray tracing exercise mode, which controls which engine features are active
@@ -72,17 +95,20 @@ class RayTracerWorld {
 
 
         /**
-         * @brief Renders and calculates the color of a specific pixel in the image by generating a ray from the camera
+         * @brief Renders and calculates the color of a pixel using multiple randomly sampled rays 
+         * for stochastic antialiasing
          *
          * @param x The horizontal coordinate of the pixel on the screen
          * @param y The vertical coordinate of the pixel on the screen
-         * @return A glm::vec3 representing the RGB color of the rendered pixel
+         * @return A glm::vec3 representing the averaged RGB color of the sampled rays
          */
         glm::vec3 renderPixel(int x, int y);
 
 
         /**
-         * @brief Calculates the normalized direction vector from the camera eye to a specific pixel on the view plane
+         * @brief Calculates the normalized direction vector from the camera eye to a point on the view plane
+         *
+         * Fractional coordinates are supported so to generate subpixel samples for antialiasing.
          *
          * @param x The horizontal coordinate of the target pixel
          * @param y The vertical coordinate of the target pixel
@@ -133,7 +159,7 @@ class RayTracerWorld {
          * @param model The scene model
          * @return true if the point is obstructed from the light (in shadow), false otherwise
          */
-        bool isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) const;
+        float isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) const;
 
 
 

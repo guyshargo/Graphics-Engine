@@ -6,11 +6,17 @@ namespace DefaultParams {
     constexpr int IMAGE_WIDTH = 600;
     constexpr int IMAGE_HEIGHT = 600;
 
-    // Ray Tracer default model
+    // --- Ray Tracer default model ---
     inline const std::string RT_MODEL_FILE_NAME = "../../RT_Models/ex_02___skybox_with_direction_labels.model";
     constexpr int DEPTH_OF_RAY_TRACING = 6;
+    inline int ANTIALIASING_SAMPLES = 16;
+    inline int SOFT_SHADOW_SAMPLES = 2;
 
-    // Rasterizer default model
+    // Trace multiple random samples within the pixel area for antialiasing
+    constexpr float MIN_SUBPIXELS_RANGE = -0.5f;
+    constexpr float MAX_SUBPIXELS_RANGE = 0.5f;
+
+    // --- Rasterizer default model ---
     inline const std::string RAST_MODEL_FILE_NAME = "../../RAST_Models/models_with_textures/sheep.obj";
 
     constexpr float INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER = 5.0f;

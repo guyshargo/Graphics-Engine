@@ -5,10 +5,10 @@
 #include <iostream>
 
 ModelLight::ModelLight() 
-    : location(0.0f, 0.0f, 0.0f), intensity(1.0f), comment("") {}
+    : location(0.0f, 0.0f, 0.0f), intensity(1.0f), radius(0.0f), comment("") {}
 
-ModelLight::ModelLight(glm::vec3 location, float intensity, const std::string& comment)
-    : location(location), intensity(intensity), comment(comment) {}
+ModelLight::ModelLight(glm::vec3 location, float intensity, float radius, const std::string& comment)
+    : location(location), intensity(intensity), radius(radius), comment(comment) {}
 
 ModelLight::ModelLight(const std::string& toStringStr) {
     std::istringstream scanner(toStringStr);
@@ -23,6 +23,14 @@ ModelLight::ModelLight(const std::string& toStringStr) {
         location = glm::vec3(locX, locY, locZ);
         
         intensity = Utilities::parseTokenFloat(scanner, "intensity");
+
+        if (toStringStr.find("radius:") != std::string::npos) {
+            radius = Utilities::parseTokenFloat(scanner, "radius");
+        } else {
+            // Default radius for files missing the parameter
+            radius = 2.0f; 
+        }
+        
         comment = Utilities::parseTokenRestOfString(scanner, "comment");
         
     } catch (const std::exception& e) {
@@ -37,7 +45,7 @@ ModelLight::ModelLight(const std::string& toStringStr) {
 std::string ModelLight::toString() const {
     char buffer[256];
     snprintf(buffer, sizeof(buffer), 
-             "Light: location_x: %f location_y: %f location_z: %f intensity: %f comment: %s",
-             location.x, location.y, location.z, intensity, comment.c_str());
+             "Light: location_x: %f location_y: %f location_z: %f intensity: %f radius: %f comment: %s",
+             location.x, location.y, location.z, intensity, radius, comment.c_str());
     return std::string(buffer);
 }

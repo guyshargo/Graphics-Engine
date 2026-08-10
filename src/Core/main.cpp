@@ -21,6 +21,7 @@
 #include "ExerciseEnum.h"
 #include "Utilities.h"
 #include "RenderCallbacks.h"
+#include "Model.h"
 
 int main() {
     SavedParams params;
@@ -69,7 +70,9 @@ int main() {
     // --- Ray Tracer Setup ---
     RayTracerWorld rayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
     bool isRtLoaded = rayTracerWorld.load(params.getRtModelFileName()); 
-    rayTracerWorld.setRenderingParams(params.getDepthOfRayTracing());
+    rayTracerWorld.setDepthOfRayTracing(params.getDepthOfRayTracing());
+    rayTracerWorld.setAntialiasingSamples(params.getAntialiasingSamples());
+    rayTracerWorld.setSoftShadowSamples(params.getSoftShadowSamples());
     rayTracerWorld.setExercise(params.getRtExercise());
     int selectedRtExercise = static_cast<int>(params.getRtExercise());
 
@@ -176,7 +179,72 @@ int main() {
                 }
                 ImGui::EndCombo();
             }
+
+            ImGui::Separator();
+            ImGui::Text("Ray Tracing Parameters");
+
+            // Soft Shadows and Light Radius Controls
+            if (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty()) {
+
+                const int sharedValues[] = {1, 2, 4, 8, 16};
+                const char* sharedLabels[] = {"1", "2", "4", "8", "16"};
+                const char* comboTitles[] = {"Antialiasing Samples", "Light Radius", "Shadow Samples"};
+
+                bool hasLight = (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty());
+
+                // category = 0 renders Antialiasing Samples, category = 1 renders Light Radius, category = 2 renders Shadow Samples
+                for (int category = 0; category < 3; category++) {
+                    
+                    // Skip Light Radius dropdown if there is no light in the scene
+                    if (category == 1 && !hasLight) continue;
+
+                    // Fetch current value based on the active parameter
+                    int currentVal;
+
+                    if (category == 0) currentVal = params.getAntialiasingSamples();
+                    else if (category == 1) currentVal = static_cast<int>(rayTracerWorld.getModel()->lights[0].radius);
+                    else currentVal = params.getSoftShadowSamples();
+
+                    int currentIndex = 0;
+                    
+                    // Match current value to dropdown index
+                    for (int i = 0; i < 5; i++) {
+                        if (currentVal == sharedValues[i]) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+
+                    // Render Combo Box
+                    if (ImGui::BeginCombo(comboTitles[category], sharedLabels[currentIndex])) {
+                        for (int i = 0; i < 5; i++) {
+                            bool isSelected = (currentIndex == i);
+                            if (ImGui::Selectable(sharedLabels[i], isSelected)) {
+                                
+                                // Apply new selection back to the correct variable
+                                if (category == 0) {
+                                    params.setAntialiasingSamples(sharedValues[i]);
+                                    rayTracerWorld.setAntialiasingSamples(params.getAntialiasingSamples());
+                                } else if (category == 1) {
+                                    rayTracerWorld.getModel()->lights[0].radius = static_cast<float>(sharedValues[i]);
+                                } else {
+                                    params.setSoftShadowSamples(sharedValues[i]);
+                                    rayTracerWorld.setSoftShadowSamples(params.getSoftShadowSamples());
+                                }
+                                needsRedraw = true;
+                            }
+                            
+                            if (isSelected) {
+                                ImGui::SetItemDefaultFocus();
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+                }
+            }
         }
+
+
         // --- Rasterizer UI ---
         else {
             if (ImGui::Button("Open Rast Model...")) {

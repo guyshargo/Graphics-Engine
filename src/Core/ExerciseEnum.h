@@ -16,7 +16,6 @@ enum class RayTracingExerciseEnum {
     EX_4_2_Lighting_Ambient,
     EX_4_3_Lighting_Specular,
     EX_5_Texture,
-    EX_6_Shadow,
     EX_7_Reflection,
     EX_8_Transparency
 };

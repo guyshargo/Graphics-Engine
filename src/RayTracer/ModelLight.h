@@ -6,11 +6,12 @@ class ModelLight {
 public:
     glm::vec3 location;
     float intensity;
+    float radius;
     std::string comment;
 
     // Constructors
     ModelLight();
-    ModelLight(glm::vec3 location, float intensity, const std::string& comment);
+    ModelLight(glm::vec3 location, float intensity, float radius, const std::string& comment);
     
     // Parse from string constructor
     explicit ModelLight(const std::string& toStringStr);
