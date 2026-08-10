@@ -91,7 +91,7 @@ class RayTracerWorld {
          * @param fovXdegree The horizontal field of view in degrees
          * @return A normalized glm::vec3 representing the ray's direction in 3D space
          */
-        static glm::vec3 calcPixelDirection(int x, int y, int imageWidth, int imageHeight, float fovXdegree);
+        static glm::vec3 calcPixelDirection(float x, float y, int imageWidth, int imageHeight, float fovXdegree);
 
 
         /**

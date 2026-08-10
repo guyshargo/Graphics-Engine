@@ -1,4 +1,5 @@
 #include <cmath>
+#include <random>
 #include <glm/gtc/constants.hpp> // For math constants
 #include <glm/trigonometric.hpp> // For radians() and tan()
 
@@ -53,14 +54,34 @@ bool RayTracerWorld::load(const std::string& filename) {
 
 glm::vec3 RayTracerWorld::renderPixel(int x, int y) {
 
+    int numSamples = 16;
+    float minSubPixelRange_val = -0.5f;
+    float maxSubPixelRange_val = 0.5f;
+
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_real_distribution<float> subPixels(minSubPixelRange_val, maxSubPixelRange_val);
+
+    glm::vec3 accumulatedPixelColor(0.0f);
+
     if (!model || !skyBoxImageSphereTexture) {
-        return glm::vec3(0.0f);
+        return accumulatedPixelColor; // Is initialized to black
     }
 
-    glm::vec3 pixelDirection = calcPixelDirection(x, y, imageWidth, imageHeight, model->fovXdegree);
-    // Camera position is (0,0,0) with calculated direction vector
-    glm::vec3 pixelColor = rayTracing(glm::vec3(0.0f), pixelDirection, *model, *skyBoxImageSphereTexture, 0);
-    return pixelColor;
+    for (int i = 0; i < numSamples; i++) {
+        float deltaX = x + subPixels(generator);
+        float deltaY = y + subPixels(generator);
+
+        glm::vec3 pixelDirection = calcPixelDirection(deltaX, deltaY, imageWidth, imageHeight, model->fovXdegree);
+
+        // Camera position is (0,0,0) with calculated direction vector
+        glm::vec3 pixelColor = rayTracing(glm::vec3(0.0f), pixelDirection, *model, *skyBoxImageSphereTexture, 0);
+
+        accumulatedPixelColor += pixelColor;
+    }
+    
+    
+    return accumulatedPixelColor /= numSamples;
 }
 
 
@@ -145,7 +166,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
 
 
 
-glm::vec3 RayTracerWorld::calcPixelDirection(int x, int y, int imageWidth, int imageHeight, float fovXdegree){
+glm::vec3 RayTracerWorld::calcPixelDirection(float x, float y, int imageWidth, int imageHeight, float fovXdegree){
     // X axis
     float xLeft = -glm::tan(glm::radians(fovXdegree) / 2.0f);
     int pixelSpacesX = imageWidth - 1;
