@@ -76,6 +76,10 @@ class RayTracerWorld {
         void setAntialiasingSamples(int antialiasingSamples);
 
         void setSoftShadowSamples(int softShadowSamples);
+
+        void setAperatureRadius(float aperatureRadius);
+
+        void setFocalDistance(float focalDistance);
                 
         /**
          * @brief Sets the current ray tracing exercise mode, which controls which engine features are active

@@ -18,23 +18,6 @@ RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree
 RayTracerWorld::~RayTracerWorld() = default;
 
 
-void RayTracerWorld::setDepthOfRayTracing(int depthOfRayTracing) {
-    params.setDepthOfRayTracing(depthOfRayTracing);
-}
-
-void RayTracerWorld::setAntialiasingSamples(int antialiasingSamples) {
-    params.setAntialiasingSamples(antialiasingSamples);
-}
-
-void RayTracerWorld::setSoftShadowSamples(int softShadowSamples) {
-    params.setSoftShadowSamples(softShadowSamples);
-}
-
-void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
-    params.setRtExercise(exercise);
-}
-
-
 bool RayTracerWorld::load(const std::string& filename) {
     try {
         // Load the model from the specified file
@@ -65,25 +48,43 @@ glm::vec3 RayTracerWorld::renderPixel(int x, int y) {
         return glm::vec3(0.0f); // Return black when the scene is not loaded
     }
 
-    // Accumulate the color returned by each sampled ray
-    glm::vec3 accumulatedPixelColor(0.0f);
-
     thread_local std::random_device rd;
     thread_local std::mt19937 generator(rd());
+
+    glm::vec3 cameraOrigin(0.0f);
+    // Accumulate the color returned by each sampled ray
+    glm::vec3 accumulatedPixelColor(0.0f);
+    
     // Generate offset from the pixel center for each sample
     std::uniform_real_distribution<float> subPixels(DefaultParams::MIN_SUBPIXELS_RANGE, DefaultParams::MAX_SUBPIXELS_RANGE);
+    std::uniform_real_distribution<float> lensSample(0.0f, 1.0f);
     
     int antialiasingSamples = params.getAntialiasingSamples();
 
     for (int i = 0; i < antialiasingSamples; i++) {
-        float deltaX = x + subPixels(generator);
-        float deltaY = y + subPixels(generator);
+
+        float subX = x + subPixels(generator);
+        float subY = y + subPixels(generator);
 
         // Generate and trace a ray through a sample's subpixel position
-        glm::vec3 pixelDirection = calcPixelDirection(deltaX, deltaY, imageWidth, imageHeight, model->fovXdegree);
+        glm::vec3 pixelDirection = calcPixelDirection(subX, subY, imageWidth, imageHeight, model->fovXdegree);
 
-        // Camera position is (0,0,0) with calculated direction vector of sample
-        glm::vec3 pixelColor = rayTracing(glm::vec3(0.0f), pixelDirection, *model, *skyBoxImageSphereTexture, 0);
+        // Finding focal point where the main ray intersects the focus plane
+        glm::vec3 focusPlanePoint = cameraOrigin + (pixelDirection * params.getFocalDistance());
+
+        // Lens Sampling
+        float randomRadius = params.getAperatureRadius() * std::sqrt(lensSample(generator));
+        float theta = 2.0f * glm::pi<float>() * lensSample(generator);
+
+        float lensX = randomRadius * std::cos(theta);
+        float lensY = randomRadius * std::sin(theta);
+
+        // Calculate the specific origin for this sample
+        glm::vec3 sampleOrigin = glm::vec3(lensX, lensY, 0.0f);
+        glm::vec3 sampleDirection = glm::normalize(focusPlanePoint - sampleOrigin);
+
+        // Camera original position is (0,0,0) with calculated direction vector of sample
+        glm::vec3 pixelColor = rayTracing(sampleOrigin, sampleDirection, *model, *skyBoxImageSphereTexture, 0);
 
         accumulatedPixelColor += pixelColor;
     }
@@ -488,4 +489,29 @@ std::optional<IntersectionResults> RayTracerWorld::rayIntersectionBVH(const BVHN
     }
 
     return hitLeft ? hitLeft : hitRight;
+}
+
+
+void RayTracerWorld::setDepthOfRayTracing(int depthOfRayTracing) {
+    params.setDepthOfRayTracing(depthOfRayTracing);
+}
+
+void RayTracerWorld::setAntialiasingSamples(int antialiasingSamples) {
+    params.setAntialiasingSamples(antialiasingSamples);
+}
+
+void RayTracerWorld::setSoftShadowSamples(int softShadowSamples) {
+    params.setSoftShadowSamples(softShadowSamples);
+}
+
+void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
+    params.setRtExercise(exercise);
+}
+
+void RayTracerWorld::setAperatureRadius(float aperatureRadius) {
+    params.setAperatureRadius(aperatureRadius);
+}
+
+void RayTracerWorld::setFocalDistance(float focalDistance) {
+    params.setFocalDistance(focalDistance);
 }

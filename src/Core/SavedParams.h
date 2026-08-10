@@ -18,6 +18,8 @@ private:
     int depthOfRayTracing = DefaultParams::DEPTH_OF_RAY_TRACING;
     int antialiasingSamples = DefaultParams::ANTIALIASING_SAMPLES;
     int softShadowSamples = DefaultParams::SOFT_SHADOW_SAMPLES;
+    float aperatureRadius = DefaultParams::APERATURE_RADIUS;
+    float focalDistance = DefaultParams::FOCAL_DISTANCE;
     RayTracingExerciseEnum rtExercise = static_cast<RayTracingExerciseEnum>(0);
 
     // Rasterizer - Direct Initialization
@@ -34,18 +36,23 @@ private:
         try {
             json j;
             file >> j; // parses the entire file into the JSON object
-            
-            rtModelFileName = j.value("rtModelFileName", DefaultParams::RT_MODEL_FILE_NAME);
-            rastModelFileName = j.value("rastModelFileName", DefaultParams::RAST_MODEL_FILE_NAME);
-            depthOfRayTracing = j.value("depthOfRayTracing", DefaultParams::DEPTH_OF_RAY_TRACING);
-            antialiasingSamples = j.value("antialiasingSamples", DefaultParams::ANTIALIASING_SAMPLES);
-            softShadowSamples = j.value("softShadowSamples", DefaultParams::SOFT_SHADOW_SAMPLES);
-            rtExercise = static_cast<RayTracingExerciseEnum>(j.value("rtExercise", 0)); 
 
-            rastExercise = static_cast<RasterizationExerciseEnum>(j.value("rastExercise", 0));
-            projectionType = static_cast<ProjectionTypeEnum>(j.value("projectionType", static_cast<int>(ProjectionTypeEnum::ORTHOGRAPHIC)));
-            displayType = static_cast<DisplayTypeEnum>(j.value("displayType", static_cast<int>(DisplayTypeEnum::FACE_EDGES)));
-            displayNormals = j.value("displayNormals", false);
+            json rtJson = j.contains("RayTracer") ? j["RayTracer"] : j;
+            json rastJson = j.contains("Rasterizer") ? j["Rasterizer"] : j;
+            
+            rtModelFileName = rtJson.value("rtModelFileName", DefaultParams::RT_MODEL_FILE_NAME);
+            depthOfRayTracing = rtJson.value("depthOfRayTracing", DefaultParams::DEPTH_OF_RAY_TRACING);
+            antialiasingSamples = rtJson.value("antialiasingSamples", DefaultParams::ANTIALIASING_SAMPLES);
+            softShadowSamples = rtJson.value("softShadowSamples", DefaultParams::SOFT_SHADOW_SAMPLES);
+            aperatureRadius = rtJson.value("aperatureRadius", DefaultParams::APERATURE_RADIUS);
+            focalDistance = rtJson.value("focalDistance", DefaultParams::FOCAL_DISTANCE);
+            rtExercise = static_cast<RayTracingExerciseEnum>(rtJson.value("rtExercise", 0));
+
+            rastModelFileName = rastJson.value("rastModelFileName", DefaultParams::RAST_MODEL_FILE_NAME);
+            rastExercise = static_cast<RasterizationExerciseEnum>(rastJson.value("rastExercise", 0));
+            projectionType = static_cast<ProjectionTypeEnum>(rastJson.value("projectionType", static_cast<int>(ProjectionTypeEnum::ORTHOGRAPHIC)));
+            displayType = static_cast<DisplayTypeEnum>(rastJson.value("displayType", static_cast<int>(DisplayTypeEnum::FACE_EDGES)));
+            displayNormals = rastJson.value("displayNormals", false);
             
             return true;
 
@@ -65,17 +72,22 @@ public:
 
     bool saveToFile() const {
         json j;
-        j["rtModelFileName"] = rtModelFileName;
-        j["rastModelFileName"] = rastModelFileName;
-        j["depthOfRayTracing"] = depthOfRayTracing;
-        j["antialiasingSamples"] = antialiasingSamples;
-        j["softShadowSamples"] = softShadowSamples;
-        j["rtExercise"] = static_cast<int>(rtExercise);
+        
+        // --- Ray Tracer Parameters Block ---
+        j["RayTracer"]["rtModelFileName"] = rtModelFileName;
+        j["RayTracer"]["depthOfRayTracing"] = depthOfRayTracing;
+        j["RayTracer"]["antialiasingSamples"] = antialiasingSamples;
+        j["RayTracer"]["softShadowSamples"] = softShadowSamples;
+        j["RayTracer"]["aperatureRadius"] = aperatureRadius;
+        j["RayTracer"]["focalDistance"] = focalDistance;
+        j["RayTracer"]["rtExercise"] = static_cast<int>(rtExercise);
 
-        j["projectionType"] = static_cast<int>(projectionType);
-        j["displayType"] = static_cast<int>(displayType);
-        j["displayNormals"] = displayNormals;
-        j["rastExercise"] = static_cast<int>(rastExercise);
+        // --- Rasterizer Parameters Block ---
+        j["Rasterizer"]["rastModelFileName"] = rastModelFileName;
+        j["Rasterizer"]["projectionType"] = static_cast<int>(projectionType);
+        j["Rasterizer"]["displayType"] = static_cast<int>(displayType);
+        j["Rasterizer"]["displayNormals"] = displayNormals;
+        j["Rasterizer"]["rastExercise"] = static_cast<int>(rastExercise);
 
         std::ofstream file("parameters.json");
         if (file.is_open()) {
@@ -94,6 +106,8 @@ public:
     int getDepthOfRayTracing() const { return depthOfRayTracing; }
     int getAntialiasingSamples() const { return antialiasingSamples; }
     int getSoftShadowSamples() const { return softShadowSamples; }
+    float getAperatureRadius() const { return aperatureRadius; }
+    float getFocalDistance() const { return focalDistance; }
     RayTracingExerciseEnum getRtExercise() const { return rtExercise; }
 
     RasterizationExerciseEnum getRastExercise() const { return rastExercise; }
@@ -149,6 +163,16 @@ public:
 
     void setRastExercise(RasterizationExerciseEnum ex) {
         rastExercise = ex;
+        saveToFile();
+    }
+
+    void setAperatureRadius(float radius) {
+        aperatureRadius = radius;
+        saveToFile();
+    }
+
+    void setFocalDistance(float distance) {
+        focalDistance = distance;
         saveToFile();
     }
 };

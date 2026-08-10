@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <execution>
 #include <windows.h> // For the File Open Dialog
+#include <filesystem>
 #include <SDL.h>
 #include <glm/glm.hpp>
 #include <magic_enum.hpp>
@@ -73,6 +74,8 @@ int main() {
     rayTracerWorld.setDepthOfRayTracing(params.getDepthOfRayTracing());
     rayTracerWorld.setAntialiasingSamples(params.getAntialiasingSamples());
     rayTracerWorld.setSoftShadowSamples(params.getSoftShadowSamples());
+    rayTracerWorld.setAperatureRadius(params.getAperatureRadius());
+    rayTracerWorld.setFocalDistance(params.getFocalDistance());
     rayTracerWorld.setExercise(params.getRtExercise());
     int selectedRtExercise = static_cast<int>(params.getRtExercise());
 
@@ -156,8 +159,9 @@ int main() {
 
         // --- Ray Tracer UI ---
         if (currentMode == EngineMode::RAY_TRACING) {
-            if (ImGui::Button("Open RT Model...")) {
-                std::string newPath = Utilities::openFileChooser("model", "");
+            if (ImGui::Button("Open RT Model")) {
+                std::string rtDir = std::filesystem::absolute("../../RT_Models").string();
+                std::string newPath = Utilities::openFileChooser("model", rtDir);
                 if (!newPath.empty()) {
                     params.setRtModelFileName(Utilities::getRelativePath(newPath));
                     isRtLoaded = rayTracerWorld.load(params.getRtModelFileName());
@@ -178,6 +182,25 @@ int main() {
                     }
                 }
                 ImGui::EndCombo();
+            }
+
+            ImGui::Separator();
+            ImGui::Text("Depth of Field Controls");
+
+            // Aperture Radius Slider (0.0f means no DoF / pinhole camera)
+            float currentAperture = params.getAperatureRadius();
+            if (ImGui::SliderFloat("Aperture Radius", &currentAperture, 0.0f, 1.0f, "%.3f")) {
+                params.setAperatureRadius(currentAperture);
+                rayTracerWorld.setAperatureRadius(currentAperture);
+                needsRedraw = true;
+            }
+
+            // Focal Distance Slider
+            float currentFocalDist = params.getFocalDistance();
+            if (ImGui::SliderFloat("Focal Distance", &currentFocalDist, 0.1f, 20.0f, "%.2f")) {
+                params.setFocalDistance(currentFocalDist);
+                rayTracerWorld.setFocalDistance(currentFocalDist);
+                needsRedraw = true;
             }
 
             ImGui::Separator();
@@ -247,8 +270,9 @@ int main() {
 
         // --- Rasterizer UI ---
         else {
-            if (ImGui::Button("Open Rast Model...")) {
-                std::string newPath = Utilities::openFileChooser("obj", "");
+            if (ImGui::Button("Open Rast Model")) {
+                std::string rastDir = std::filesystem::absolute("../../RAST_Models").string();
+                std::string newPath = Utilities::openFileChooser("model", rastDir);
                 if (!newPath.empty()) {
                     params.setRastModelFileName(Utilities::getRelativePath(newPath));
                     isRastLoaded = rasterizerWorld.load(params.getRastModelFileName());
@@ -277,7 +301,7 @@ int main() {
                     bool isSelected = (rasterizerWorld.displayType == val);
                     if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
                         rasterizerWorld.displayType = val;
-                        params.setDisplayType(val); // Save to parameters.json
+                        params.setDisplayType(val);
                         needsRedraw = true;
                     }
                 }
@@ -286,12 +310,21 @@ int main() {
 
             ImGui::Separator();
             ImGui::Text("Projection:");
-            if (ImGui::RadioButton("Orthographic", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::ORTHOGRAPHIC)) { needsRedraw = true; }
+            if (ImGui::RadioButton("Orthographic", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::ORTHOGRAPHIC)) { 
+                params.setProjectionType(ProjectionTypeEnum::ORTHOGRAPHIC);
+                needsRedraw = true; 
+            }
             ImGui::SameLine();
-            if (ImGui::RadioButton("Perspective", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::PERSPECTIVE)) { needsRedraw = true; }
+            if (ImGui::RadioButton("Perspective", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::PERSPECTIVE)) { 
+                params.setProjectionType(ProjectionTypeEnum::PERSPECTIVE);
+                needsRedraw = true; 
+            }
         
             ImGui::Separator();
-            if (ImGui::Checkbox("Show Normals", &rasterizerWorld.displayNormals)) { needsRedraw = true; }
+            if (ImGui::Checkbox("Show Normals", &rasterizerWorld.displayNormals)) { 
+                params.setDisplayNormals(rasterizerWorld.displayNormals);
+                needsRedraw = true; 
+            }
             
         }
         

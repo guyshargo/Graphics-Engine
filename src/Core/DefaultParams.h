@@ -13,8 +13,13 @@ namespace DefaultParams {
     inline int SOFT_SHADOW_SAMPLES = 2;
 
     // Trace multiple random samples within the pixel area for antialiasing
-    constexpr float MIN_SUBPIXELS_RANGE = -0.5f;
-    constexpr float MAX_SUBPIXELS_RANGE = 0.5f;
+    inline float MIN_SUBPIXELS_RANGE = -0.5f;
+    inline float MAX_SUBPIXELS_RANGE = 0.5f;
+
+    // Blur intensity
+    constexpr float APERATURE_RADIUS = 0.1f;
+    // Focus plane
+    constexpr float FOCAL_DISTANCE = 5.0f;
 
     // --- Rasterizer default model ---
     inline const std::string RAST_MODEL_FILE_NAME = "../../RAST_Models/models_with_textures/sheep.obj";
