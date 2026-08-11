@@ -100,7 +100,7 @@ bool ObjectModel::load(const std::string& fileName) {
 
 bool ObjectModel::objectHasTexture() const { return hasTexture; }
 
-void ObjectModel::render(const SetPixelCallback& setPixel) {
+void ObjectModel::render(const PlotPixelCallback& plotPixel) {
 
     exercise = rasterizerWorld -> exercise;
 
@@ -117,12 +117,12 @@ void ObjectModel::render(const SetPixelCallback& setPixel) {
 
         // going through all vertices to figure out where they are on the screen
         for (VertexData& vertexData : verticesData) {
-            vertexProcessing(setPixel, vertexData);
+            vertexProcessing(plotPixel, vertexData);
         }
 
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
-            rasterization(setPixel, 
+            rasterization(plotPixel, 
                           verticesData[face.indices[0]],
                           verticesData[face.indices[1]],
                           verticesData[face.indices[2]],
@@ -131,7 +131,7 @@ void ObjectModel::render(const SetPixelCallback& setPixel) {
     }
 }
 
-void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData& vertex) {
+void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex) {
 
     // converting vertex to homogeneous coordinates for transformations with 4x4 matrixes
     glm::vec4 homoPointObj(vertex.pointObjectCoordinates, 1.0f);
@@ -159,7 +159,7 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
     vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
 
     // transformation normal from object coordinates to eye coordinates v->normal
-    transformNormalFromObjectCoordToEyeCoordAndDrawIt(setPixel, vertex);
+    transformNormalFromObjectCoordToEyeCoordAndDrawIt(plotPixel, vertex);
 
     // calculate lighting for a vertex for 'gourard shading'
     if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
@@ -171,7 +171,7 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
     }
 }
 
-void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const SetPixelCallback& setPixel, VertexData& vertex) {
+void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const PlotPixelCallback& plotPixel, VertexData& vertex) {
 
     // transformation normal from object coordinates to eye coordinates v->normal
     // --> v->NormalEyeCoordinates
@@ -193,11 +193,11 @@ void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const SetPix
 
         t2 = viewportM * t2;
         glm::vec3 point_plusNormal_screen(t2);
-        drawLineDDA(setPixel, vertex.pointWindowCoordinates, point_plusNormal_screen, 0, 0, 1.0f);
+        drawLineBresenham(plotPixel, vertex.pointWindowCoordinates, point_plusNormal_screen, 0, 0, 1.0f);
     }
 }
 
-void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexData& vertex1, const VertexData& vertex2, 
+void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
                                 const VertexData& vertex3, const glm::vec3& faceColor) {
     
     // normal for entire polygon face for 'flat shading'
@@ -206,9 +206,9 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
     
     // lines rasterization: draw white lines between polygon vertices
     if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_EDGES) {
-        drawLineDDA(setPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineDDA(setPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineDDA(setPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
     
     // Polygon faces
     } else {
@@ -285,7 +285,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                             if (!hasTexture) {
                                 // No texture available
                                 glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                setPixel(x, y, magenta);
+                                plotPixel(x, y, magenta);
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
                                 continue;
                             }
@@ -302,7 +302,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                             if (!hasTexture) {
                                 // No texture available
                                 glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                setPixel(x, y, magenta);
+                                plotPixel(x, y, magenta);
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
                                 continue;
                             }
@@ -331,7 +331,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                         glm::vec3 pixelColor = fragmentProcessing(fragmentData);
 
                         // paint pixel and set zBuffer to current pixel's
-                        setPixel(x, y, pixelColor);
+                        plotPixel(x, y, pixelColor);
                         rasterizerWorld -> zBuffer[zBufferIndex] = zDepth;
                     }
                 }
@@ -404,53 +404,72 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     return glm::vec3();
 }
 
-void ObjectModel::drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
+void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
 
-    int x1round = static_cast<int>(std::round(p1.x));
-    int x2round = static_cast<int>(std::round(p2.x));
-    int y1round = static_cast<int>(std::round(p1.y));
-    int y2round = static_cast<int>(std::round(p2.y));
+    int x1 = static_cast<int>(std::round(p1.x));
+    int x2 = static_cast<int>(std::round(p2.x));
+    int y1 = static_cast<int>(std::round(p1.y));
+    int y2 = static_cast<int>(std::round(p2.y));
 
-    int dx = x2round - x1round;
-    int dy = y2round - y1round;
+    int dx = x2 - x1;
+    int dy = y2 - y1;
 
     // First check if switching points is needed
-    if ((dy < -dx) || ((dy == -dx) && (dx < 0))) {
+    if (dy < -dx) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
 
-        // Switch between p1 and p2
-        int tempX1 = x1round;
-        x1round = x2round;
-        x2round = tempX1;
-        int tempY1 = y1round;
-        y1round = y2round;
-        y2round = tempY1;
-
-        // Recalculate dx, dy with switched points
-        dx = x2round - x1round;
-        dy = y2round - y1round;
+        dx = x2 - x1;
+        dy = y2 - y1;
     }
 
-    // Second check to implement via X axis
     if (std::abs(dy) <= std::abs(dx)) {
-        float a = (float) dy/dx;
-        float y = y1round;
-        
-        for (int x = x1round; x <= x2round; x++) {
-            setPixel(x, std::round(y), glm::vec3(r, g, b));
-            y += a;
-        }
-    }
+        int yInceremnt = 1;
 
-    // Third check to implement via Y axis
-    else {
-        float a = static_cast<float>(dx) / dy;  // only here 'a' is calculated dx/dy
-        float x = x1round;
-
-        for (int y = y1round; y <= y2round; y++) {
-            setPixel(std::round(x), y, glm::vec3(r, g, b));
-            x += a;
+        if (dy < 0) {
+            yInceremnt = -1;
+            dy = -dy;
         }
-    }
+
+        int y = y1;
+        int diff = 2*dy - dx;
+
+        for (int stepX = x1; stepX <= x2; stepX++) {
+            plotPixel(stepX, y, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dy;
+
+            } else {
+                y += yInceremnt;
+                diff += 2*dy - 2*dx;
+            }
+        }
+
+    } else {
+
+        int xInceremnt = 1;
+
+        if (dx < 0) {
+            xInceremnt = -1;
+            dx = -dx;
+        }
+
+        int x = x1;
+        int diff = 2*dx - dy;
+
+        for (int stepY = y1; stepY <= y2; stepY++) {
+            plotPixel(x, stepY, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dx;
+
+            } else {
+                x += xInceremnt;
+                diff += 2*dx - 2*dy;
+            }
+        }
+    }   
 }
 
 // calc 4 vertices of bounding box of polygon

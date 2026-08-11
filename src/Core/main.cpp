@@ -66,7 +66,8 @@ void handleOpenFile(EngineMode& currentMode, SavedParams& params, RayTracerWorld
     std::string modelsDir = (currentMode == EngineMode::RASTERIZATION) ? std::filesystem::absolute("../../RAST_Models").string() 
                                                                         : std::filesystem::absolute("../../RT_Models").string();
 
-    std::string newPath = Utilities::openFileChooser("model", modelsDir);
+    std::string newPath = (currentMode == EngineMode::RASTERIZATION) ? Utilities::openFileChooser("obj", modelsDir)
+                                                                        : Utilities::openFileChooser("model", modelsDir);
 
     if (!newPath.empty()) {
 
