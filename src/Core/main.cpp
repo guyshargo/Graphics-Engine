@@ -21,13 +21,271 @@
 #include "DefaultParams.h"
 #include "ExerciseEnum.h"
 #include "Utilities.h"
-#include "RenderCallbacks.h"
 #include "Model.h"
 
+// --------------------------------------------------------
+// Event Handlers
+// --------------------------------------------------------
+void handleMouseWheelScrolling(const SDL_Event& event, RasterizerWorld& rasterizerWorld, bool& updateWindowFlag) {
+    rasterizerWorld.zoomCamera(static_cast<float>(event.wheel.y));
+    updateWindowFlag = true;
+}
+
+void handleMouseDragged(const SDL_Event& event, RasterizerWorld& rasterizerWorld, bool& updateWindowFlag) {
+    if (event.motion.state & SDL_BUTTON_LMASK) {
+        rasterizerWorld.rotateCamera(static_cast<float>(event.motion.xrel), static_cast<float>(event.motion.yrel));
+        updateWindowFlag = true;
+    }
+    else if (event.motion.state & SDL_BUTTON_RMASK) {
+        rasterizerWorld.panCamera(static_cast<float>(event.motion.xrel), static_cast<float>(event.motion.yrel));
+        updateWindowFlag = true;
+    }
+}
+
+void handleInputEvents(SDL_Event& event, bool& isRunning, EngineMode currentMode, RasterizerWorld& rasterizerWorld, bool& updateWindowFlag) {
+    while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+        if (event.type == SDL_QUIT) {
+            isRunning = false;
+        }
+
+        if (currentMode == EngineMode::RASTERIZATION && !ImGui::GetIO().WantCaptureMouse) {
+            if (event.type == SDL_MOUSEWHEEL) {
+                handleMouseWheelScrolling(event, rasterizerWorld, updateWindowFlag);
+            }
+            else if (event.type == SDL_MOUSEMOTION) {
+                handleMouseDragged(event, rasterizerWorld, updateWindowFlag);
+            }
+        }
+    }
+}
+
+void handleOpenFile(SavedParams& params, RayTracerWorld& rayTracerWorld, bool& isRtLoaded, bool& updateWindowFlag) {
+    std::string rtDir = std::filesystem::absolute("../../RT_Models").string();
+    std::string newPath = Utilities::openFileChooser("model", rtDir);
+    if (!newPath.empty()) {
+        params.setRtModelFileName(Utilities::getRelativePath(newPath));
+        isRtLoaded = rayTracerWorld.load(params.getRtModelFileName());
+        updateWindowFlag = true;
+    }
+}
+
+void handleOpenFileRasterizer(SavedParams& params, RasterizerWorld& rasterizerWorld, bool& isRastLoaded, bool& updateWindowFlag) {
+    std::string rastDir = std::filesystem::absolute("../../RAST_Models").string();
+    std::string newPath = Utilities::openFileChooser("model", rastDir);
+    if (!newPath.empty()) {
+        params.setRastModelFileName(Utilities::getRelativePath(newPath));
+        isRastLoaded = rasterizerWorld.load(params.getRastModelFileName());
+        updateWindowFlag = true;
+    }
+}
+
+// --------------------------------------------------------
+// UI Rendering Abstraction
+// --------------------------------------------------------
+void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracerWorld& rayTracerWorld, bool& isRtLoaded, RasterizerWorld& rasterizerWorld, bool& isRastLoaded, int& selectedRtExercise, int& selectedRastExercise, bool& updateWindowFlag) {
+    ImGui_ImplSDLRenderer2_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::Begin("Engine Controls");
+    
+    ImGui::Text("Active Engine:");
+    if (ImGui::RadioButton("Ray Tracer", (int*)&currentMode, (int)EngineMode::RAY_TRACING)) { updateWindowFlag = true; }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rasterizer", (int*)&currentMode, (int)EngineMode::RASTERIZATION)) { updateWindowFlag = true; }
+    ImGui::Separator();
+
+    if (currentMode == EngineMode::RAY_TRACING) {
+        if (ImGui::Button("Open RT Model")) {
+            handleOpenFile(params, rayTracerWorld, isRtLoaded, updateWindowFlag);
+        }
+        ImGui::TextWrapped("Model: %s", params.getRtModelFileName().c_str());
+
+        std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RayTracingExerciseEnum>(selectedRtExercise)));
+        if (ImGui::BeginCombo("RT Exercise", currentExerciseName.c_str())) {
+            for (const auto& val : magic_enum::enum_values<RayTracingExerciseEnum>()) {
+                bool isSelected = (selectedRtExercise == static_cast<int>(val));
+                if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
+                    selectedRtExercise = static_cast<int>(val);
+                    params.setRtExercise(static_cast<RayTracingExerciseEnum>(selectedRtExercise));
+                    rayTracerWorld.setExercise(params.getRtExercise());
+                    updateWindowFlag = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Depth of Field Controls");
+
+        float currentAperture = params.getAperatureRadius();
+        if (ImGui::SliderFloat("Aperture Radius", &currentAperture, 0.0f, 1.0f, "%.3f")) {
+            params.setAperatureRadius(currentAperture);
+            rayTracerWorld.setAperatureRadius(currentAperture);
+            updateWindowFlag = true;
+        }
+
+        float currentFocalDist = params.getFocalDistance();
+        if (ImGui::SliderFloat("Focal Distance", &currentFocalDist, 0.1f, 20.0f, "%.2f")) {
+            params.setFocalDistance(currentFocalDist);
+            rayTracerWorld.setFocalDistance(currentFocalDist);
+            updateWindowFlag = true;
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Ray Tracing Parameters");
+
+        if (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty()) {
+            const int sharedValues[] = {1, 2, 4, 8, 16};
+            const char* sharedLabels[] = {"1", "2", "4", "8", "16"};
+            const char* comboTitles[] = {"Antialiasing Samples", "Light Radius", "Shadow Samples"};
+            bool hasLight = (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty());
+
+            for (int category = 0; category < 3; category++) {
+                if (category == 1 && !hasLight) continue;
+
+                int currentVal;
+                if (category == 0) currentVal = params.getAntialiasingSamples();
+                else if (category == 1) currentVal = static_cast<int>(rayTracerWorld.getModel()->lights[0].radius);
+                else currentVal = params.getSoftShadowSamples();
+
+                int currentIndex = 0;
+                for (int i = 0; i < 5; i++) {
+                    if (currentVal == sharedValues[i]) {
+                        currentIndex = i;
+                        break;
+                    }
+                }
+
+                if (ImGui::BeginCombo(comboTitles[category], sharedLabels[currentIndex])) {
+                    for (int i = 0; i < 5; i++) {
+                        bool isSelected = (currentIndex == i);
+                        if (ImGui::Selectable(sharedLabels[i], isSelected)) {
+                            if (category == 0) {
+                                params.setAntialiasingSamples(sharedValues[i]);
+                                rayTracerWorld.setAntialiasingSamples(params.getAntialiasingSamples());
+                            } else if (category == 1) {
+                                rayTracerWorld.getModel()->lights[0].radius = static_cast<float>(sharedValues[i]);
+                            } else {
+                                params.setSoftShadowSamples(sharedValues[i]);
+                                rayTracerWorld.setSoftShadowSamples(params.getSoftShadowSamples());
+                            }
+                            updateWindowFlag = true;
+                        }
+                        if (isSelected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+            }
+        }
+    }
+    else {
+        if (ImGui::Button("Open Rast Model")) {
+            handleOpenFileRasterizer(params, rasterizerWorld, isRastLoaded, updateWindowFlag);
+        }
+        ImGui::TextWrapped("Model: %s", params.getRastModelFileName().c_str());
+
+        std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RasterizationExerciseEnum>(selectedRastExercise)));
+        if (ImGui::BeginCombo("Rast Exercise", currentExerciseName.c_str())) {
+            for (const auto& val : magic_enum::enum_values<RasterizationExerciseEnum>()) {
+                bool isSelected = (selectedRastExercise == static_cast<int>(val));
+                if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
+                    selectedRastExercise = static_cast<int>(val);
+                    params.setRastExercise(static_cast<RasterizationExerciseEnum>(selectedRastExercise));
+                    rasterizerWorld.exercise = params.getRastExercise();
+                    updateWindowFlag = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        std::string currentDisplayTypeName = std::string(magic_enum::enum_name(rasterizerWorld.displayType));
+        if (ImGui::BeginCombo("Display Type", currentDisplayTypeName.c_str())) {
+            for (const auto& val : magic_enum::enum_values<DisplayTypeEnum>()) {
+                bool isSelected = (rasterizerWorld.displayType == val);
+                if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
+                    rasterizerWorld.displayType = val;
+                    params.setDisplayType(val);
+                    updateWindowFlag = true;
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Projection:");
+        if (ImGui::RadioButton("Orthographic", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::ORTHOGRAPHIC)) { 
+            params.setProjectionType(ProjectionTypeEnum::ORTHOGRAPHIC);
+            updateWindowFlag = true; 
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Perspective", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::PERSPECTIVE)) { 
+            params.setProjectionType(ProjectionTypeEnum::PERSPECTIVE);
+            updateWindowFlag = true; 
+        }
+    
+        ImGui::Separator();
+        if (ImGui::Checkbox("Show Normals", &rasterizerWorld.displayNormals)) { 
+            params.setDisplayNormals(rasterizerWorld.displayNormals);
+            updateWindowFlag = true; 
+        }
+    }
+    ImGui::End();
+}
+
+// --------------------------------------------------------
+// Render Execution
+// --------------------------------------------------------
+template <typename ClearFunc, typename SetFunc>
+void timerRender(EngineMode currentMode, bool& updateWindowFlag, bool isRtLoaded, bool isRastLoaded, 
+                 std::vector<uint32_t>& pixelBuffer, std::vector<int>& pixelIndices, 
+                 std::mt19937& pixelOrderGenerator, size_t& currentPixelIndex, size_t PIXELS_PER_FRAME,
+                 RayTracerWorld& rayTracerWorld, RasterizerWorld& rasterizerWorld, 
+                 SDL_Texture* texture, const ClearFunc& clearImage, const SetFunc& setPixel) {
+    
+    if (updateWindowFlag) {
+        if (currentMode == EngineMode::RAY_TRACING) {
+            currentPixelIndex = 0;
+            std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF323232);
+            std::shuffle(pixelIndices.begin(), pixelIndices.end(), pixelOrderGenerator);
+            updateWindowFlag = false; 
+        } else {
+            clearImage();
+            if (isRastLoaded) {
+                rasterizerWorld.render(clearImage, setPixel);
+                SDL_UpdateTexture(texture, nullptr, pixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
+            }
+            updateWindowFlag = false;
+        }
+    }
+
+    // Ray Tracing Processing (Iterative & Parallelized)
+    if (currentMode == EngineMode::RAY_TRACING && isRtLoaded && currentPixelIndex < pixelIndices.size()) {
+        size_t endPixelIndex = std::min(currentPixelIndex + PIXELS_PER_FRAME, pixelIndices.size());
+
+        // Inline Lambda for rendering pixels concurrently
+        std::for_each(std::execution::par, 
+                      pixelIndices.begin() + currentPixelIndex, 
+                      pixelIndices.begin() + endPixelIndex, 
+                      [&pixelBuffer, &rayTracerWorld](int pixelIndex) {
+                          int x = pixelIndex % DefaultParams::IMAGE_WIDTH;
+                          int y = pixelIndex / DefaultParams::IMAGE_WIDTH;
+                          glm::vec3 color = rayTracerWorld.renderPixel(x, y);
+                          Utilities::WriteColorToBuffer(pixelBuffer, x, y, color, DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
+                      });
+        
+        currentPixelIndex = endPixelIndex;
+        SDL_UpdateTexture(texture, nullptr, pixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
+    }
+}
+
+// --------------------------------------------------------
+// Main Application Loop
+// --------------------------------------------------------
 int main() {
     SavedParams params;
 
-    // --- SDL Initialization ---
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
         return -1;
@@ -42,7 +300,6 @@ int main() {
                                              SDL_TEXTUREACCESS_STREAMING, 
                                              DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
 
-    // --- ImGui Initialization ---
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -50,25 +307,16 @@ int main() {
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
 
-    // --- State Variables ---
     EngineMode currentMode = EngineMode::RAY_TRACING;
-    bool needsRedraw = true; // Tracks when a refresh is required
+    bool updateWindowFlag = true; 
 
     std::vector<uint32_t> pixelBuffer(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT, 0xFF323232);
-
-    // --- Setting boudaries of frame to draw
     std::vector<int> pixelIndices(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT);
     std::iota(pixelIndices.begin(), pixelIndices.end(), 0);
-
-    // --- Randomizing pixels order to color ---
-    // Provides a random seed
     std::random_device randomSeed;
-    // Uses seed to create a pseudo-random generator
     std::mt19937 pixelOrderGenerator(randomSeed());
-    // Uses generator to shuffle pixels order
     std::shuffle(pixelIndices.begin(), pixelIndices.end(), pixelOrderGenerator);
 
-    // --- Ray Tracer Setup ---
     RayTracerWorld rayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f);
     bool isRtLoaded = rayTracerWorld.load(params.getRtModelFileName()); 
     rayTracerWorld.setDepthOfRayTracing(params.getDepthOfRayTracing());
@@ -79,294 +327,50 @@ int main() {
     rayTracerWorld.setExercise(params.getRtExercise());
     int selectedRtExercise = static_cast<int>(params.getRtExercise());
 
-    // --- Rasterizer Setup ---
     RasterizerWorld rasterizerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
     bool isRastLoaded = rasterizerWorld.load(params.getRastModelFileName());
     rasterizerWorld.exercise = params.getRastExercise();
     int selectedRastExercise = static_cast<int>(params.getRastExercise());
     
-    // --- Camera & Setup variables ---
     rasterizerWorld.cameraPos = DefaultParams::cameraPos;
     rasterizerWorld.cameraLookAtCenter = DefaultParams::cameraLookAtCenter;
     rasterizerWorld.cameraUp = DefaultParams::cameraUp;
     rasterizerWorld.horizontalFOV = DefaultParams::horizontalFOV;
     rasterizerWorld.modelScale = DefaultParams::modelScale;
 
-    // Setup Lighting Defaults
     rasterizerWorld.lighting_Diffuse = DefaultParams::lighting_Diffuse;
     rasterizerWorld.lighting_Specular = DefaultParams::lighting_Specular;
     rasterizerWorld.lighting_Ambient = DefaultParams::lighting_Ambient;
     rasterizerWorld.lighting_sHininess = DefaultParams::lighting_sHininess;
     rasterizerWorld.lightPositionWorldCoordinates = DefaultParams::lightPosition;
 
-    // Setup Render States from JSON
     rasterizerWorld.projectionType = params.getProjectionType();
     rasterizerWorld.displayType = params.getDisplayType();
     rasterizerWorld.displayNormals = params.isDisplayNormals();
 
-    // Initiate render callbacks
-    ImageClearer clearImage(pixelBuffer);
-    PixelSetter setPixel(pixelBuffer);
-    PixelRenderer rendererTask(pixelBuffer, rayTracerWorld);
+    // Inline Lambda Callbacks
+    auto clearImage = [&pixelBuffer]() {
+        std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF323232);
+    };
 
-    // Main Loop
+    auto setPixel = [&pixelBuffer](int x, int y, const glm::vec3& color) {
+        Utilities::WriteColorToBuffer(pixelBuffer, x, y, color, DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
+    };
+
     bool isRunning = true;
     size_t currentPixelIndex = 0;
     const size_t PIXELS_PER_FRAME = 5000;
 
+    // Main Loop
     while (isRunning) {
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT) isRunning = false;
-
-            // --- Camera-Mouse Moevment Hook ---
-            // Only process camera inputs if in Rasterization mode and ImGui isn't using the mouse
-            if (currentMode == EngineMode::RASTERIZATION && !ImGui::GetIO().WantCaptureMouse) {
-                
-                if (event.type == SDL_MOUSEWHEEL) {
-                    rasterizerWorld.zoomCamera(static_cast<float>(event.wheel.y));
-                    needsRedraw = true; // Tell the engine to update the frame
-                }
-                else if (event.type == SDL_MOUSEMOTION) {
-                    
-                    // Left click drag to rotate
-                    if (event.motion.state & SDL_BUTTON_LMASK) {
-                        rasterizerWorld.rotateCamera(static_cast<float>(event.motion.xrel), static_cast<float>(event.motion.yrel));
-                        needsRedraw = true;
-                    }
-                    // Right click drag to pan
-                    else if (event.motion.state & SDL_BUTTON_RMASK) {
-                        rasterizerWorld.panCamera(static_cast<float>(event.motion.xrel), static_cast<float>(event.motion.yrel));
-                        needsRedraw = true;
-                    }
-                }
-            }
-        }
-
-        ImGui_ImplSDLRenderer2_NewFrame();
-        ImGui_ImplSDL2_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Engine Controls");
         
-        // --- Engine Mode Switch ---
-        ImGui::Text("Active Engine:");
-        if (ImGui::RadioButton("Ray Tracer", (int*)&currentMode, (int)EngineMode::RAY_TRACING)) { needsRedraw = true; }
-        ImGui::SameLine();
-        if (ImGui::RadioButton("Rasterizer", (int*)&currentMode, (int)EngineMode::RASTERIZATION)) { needsRedraw = true; }
-        ImGui::Separator();
-
-        // --- Ray Tracer UI ---
-        if (currentMode == EngineMode::RAY_TRACING) {
-            if (ImGui::Button("Open RT Model")) {
-                std::string rtDir = std::filesystem::absolute("../../RT_Models").string();
-                std::string newPath = Utilities::openFileChooser("model", rtDir);
-                if (!newPath.empty()) {
-                    params.setRtModelFileName(Utilities::getRelativePath(newPath));
-                    isRtLoaded = rayTracerWorld.load(params.getRtModelFileName());
-                    needsRedraw = true;
-                }
-            }
-            ImGui::TextWrapped("Model: %s", params.getRtModelFileName().c_str());
-
-            std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RayTracingExerciseEnum>(selectedRtExercise)));
-            if (ImGui::BeginCombo("RT Exercise", currentExerciseName.c_str())) {
-                for (const auto& val : magic_enum::enum_values<RayTracingExerciseEnum>()) {
-                    bool isSelected = (selectedRtExercise == static_cast<int>(val));
-                    if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
-                        selectedRtExercise = static_cast<int>(val);
-                        params.setRtExercise(static_cast<RayTracingExerciseEnum>(selectedRtExercise));
-                        rayTracerWorld.setExercise(params.getRtExercise());
-                        needsRedraw = true;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            ImGui::Separator();
-            ImGui::Text("Depth of Field Controls");
-
-            // Aperture Radius Slider (0.0f means no DoF / pinhole camera)
-            float currentAperture = params.getAperatureRadius();
-            if (ImGui::SliderFloat("Aperture Radius", &currentAperture, 0.0f, 1.0f, "%.3f")) {
-                params.setAperatureRadius(currentAperture);
-                rayTracerWorld.setAperatureRadius(currentAperture);
-                needsRedraw = true;
-            }
-
-            // Focal Distance Slider
-            float currentFocalDist = params.getFocalDistance();
-            if (ImGui::SliderFloat("Focal Distance", &currentFocalDist, 0.1f, 20.0f, "%.2f")) {
-                params.setFocalDistance(currentFocalDist);
-                rayTracerWorld.setFocalDistance(currentFocalDist);
-                needsRedraw = true;
-            }
-
-            ImGui::Separator();
-            ImGui::Text("Ray Tracing Parameters");
-
-            // Soft Shadows and Light Radius Controls
-            if (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty()) {
-
-                const int sharedValues[] = {1, 2, 4, 8, 16};
-                const char* sharedLabels[] = {"1", "2", "4", "8", "16"};
-                const char* comboTitles[] = {"Antialiasing Samples", "Light Radius", "Shadow Samples"};
-
-                bool hasLight = (isRtLoaded && rayTracerWorld.getModel() != nullptr && !rayTracerWorld.getModel()->lights.empty());
-
-                // category = 0 renders Antialiasing Samples, category = 1 renders Light Radius, category = 2 renders Shadow Samples
-                for (int category = 0; category < 3; category++) {
-                    
-                    // Skip Light Radius dropdown if there is no light in the scene
-                    if (category == 1 && !hasLight) continue;
-
-                    // Fetch current value based on the active parameter
-                    int currentVal;
-
-                    if (category == 0) currentVal = params.getAntialiasingSamples();
-                    else if (category == 1) currentVal = static_cast<int>(rayTracerWorld.getModel()->lights[0].radius);
-                    else currentVal = params.getSoftShadowSamples();
-
-                    int currentIndex = 0;
-                    
-                    // Match current value to dropdown index
-                    for (int i = 0; i < 5; i++) {
-                        if (currentVal == sharedValues[i]) {
-                            currentIndex = i;
-                            break;
-                        }
-                    }
-
-                    // Render Combo Box
-                    if (ImGui::BeginCombo(comboTitles[category], sharedLabels[currentIndex])) {
-                        for (int i = 0; i < 5; i++) {
-                            bool isSelected = (currentIndex == i);
-                            if (ImGui::Selectable(sharedLabels[i], isSelected)) {
-                                
-                                // Apply new selection back to the correct variable
-                                if (category == 0) {
-                                    params.setAntialiasingSamples(sharedValues[i]);
-                                    rayTracerWorld.setAntialiasingSamples(params.getAntialiasingSamples());
-                                } else if (category == 1) {
-                                    rayTracerWorld.getModel()->lights[0].radius = static_cast<float>(sharedValues[i]);
-                                } else {
-                                    params.setSoftShadowSamples(sharedValues[i]);
-                                    rayTracerWorld.setSoftShadowSamples(params.getSoftShadowSamples());
-                                }
-                                needsRedraw = true;
-                            }
-                            
-                            if (isSelected) {
-                                ImGui::SetItemDefaultFocus();
-                            }
-                        }
-                        ImGui::EndCombo();
-                    }
-                }
-            }
-        }
-
-
-        // --- Rasterizer UI ---
-        else {
-            if (ImGui::Button("Open Rast Model")) {
-                std::string rastDir = std::filesystem::absolute("../../RAST_Models").string();
-                std::string newPath = Utilities::openFileChooser("model", rastDir);
-                if (!newPath.empty()) {
-                    params.setRastModelFileName(Utilities::getRelativePath(newPath));
-                    isRastLoaded = rasterizerWorld.load(params.getRastModelFileName());
-                    needsRedraw = true;
-                }
-            }
-            ImGui::TextWrapped("Model: %s", params.getRastModelFileName().c_str());
-
-            std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RasterizationExerciseEnum>(selectedRastExercise)));
-            if (ImGui::BeginCombo("Rast Exercise", currentExerciseName.c_str())) {
-                for (const auto& val : magic_enum::enum_values<RasterizationExerciseEnum>()) {
-                    bool isSelected = (selectedRastExercise == static_cast<int>(val));
-                    if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
-                        selectedRastExercise = static_cast<int>(val);
-                        params.setRastExercise(static_cast<RasterizationExerciseEnum>(selectedRastExercise));
-                        rasterizerWorld.exercise = params.getRastExercise();
-                        needsRedraw = true;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            std::string currentDisplayTypeName = std::string(magic_enum::enum_name(rasterizerWorld.displayType));
-            if (ImGui::BeginCombo("Display Type", currentDisplayTypeName.c_str())) {
-                for (const auto& val : magic_enum::enum_values<DisplayTypeEnum>()) {
-                    bool isSelected = (rasterizerWorld.displayType == val);
-                    if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
-                        rasterizerWorld.displayType = val;
-                        params.setDisplayType(val);
-                        needsRedraw = true;
-                    }
-                }
-                ImGui::EndCombo();
-            }
-
-            ImGui::Separator();
-            ImGui::Text("Projection:");
-            if (ImGui::RadioButton("Orthographic", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::ORTHOGRAPHIC)) { 
-                params.setProjectionType(ProjectionTypeEnum::ORTHOGRAPHIC);
-                needsRedraw = true; 
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Perspective", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::PERSPECTIVE)) { 
-                params.setProjectionType(ProjectionTypeEnum::PERSPECTIVE);
-                needsRedraw = true; 
-            }
+        handleInputEvents(event, isRunning, currentMode, rasterizerWorld, updateWindowFlag);
         
-            ImGui::Separator();
-            if (ImGui::Checkbox("Show Normals", &rasterizerWorld.displayNormals)) { 
-                params.setDisplayNormals(rasterizerWorld.displayNormals);
-                needsRedraw = true; 
-            }
-            
-        }
+        renderUserInterface(currentMode, params, rayTracerWorld, isRtLoaded, rasterizerWorld, isRastLoaded, selectedRtExercise, selectedRastExercise, updateWindowFlag);
         
-        ImGui::End();
-
-        // --- Event Execution & Rendering ---
-        if (needsRedraw) {
-            if (currentMode == EngineMode::RAY_TRACING) {
-                currentPixelIndex = 0;
-                // Reset the image before starting a new ray-tracing render
-                std::fill(pixelBuffer.begin(), pixelBuffer.end(), 0xFF323232);
-                // Randomize which pixels are rendered first
-                std::shuffle(pixelIndices.begin(), pixelIndices.end(), pixelOrderGenerator);
-                needsRedraw = false; 
-            } else {
-                clearImage();
-                if (isRastLoaded) {
-                    rasterizerWorld.render(clearImage, setPixel);
-                    SDL_UpdateTexture(texture, nullptr, pixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
-                }
-                needsRedraw = false;
-            }
-        }
-
-        // Ray Tracing Processing (Iterative & Parallelized)
-        if (currentMode == EngineMode::RAY_TRACING && isRtLoaded && currentPixelIndex < pixelIndices.size()) {
-            size_t endPixelIndex = std::min(currentPixelIndex + PIXELS_PER_FRAME, pixelIndices.size());
-
-            // Instantiate the functor with your local variables
-            PixelRenderer rendererTask(pixelBuffer, rayTracerWorld);
-
-            // Pass the functor directly to std::for_each
-            std::for_each(std::execution::par, 
-                          pixelIndices.begin() + currentPixelIndex, 
-                          pixelIndices.begin() + endPixelIndex, 
-                          rendererTask);
-            
-            currentPixelIndex = endPixelIndex;
-            SDL_UpdateTexture(texture, nullptr, pixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
-        }
-
-        // --- Drawing ---
+        timerRender(currentMode, updateWindowFlag, isRtLoaded, isRastLoaded, pixelBuffer, pixelIndices, pixelOrderGenerator, currentPixelIndex, PIXELS_PER_FRAME, rayTracerWorld, rasterizerWorld, texture, clearImage, setPixel);
+        
         ImGui::Render();
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, nullptr, nullptr); 
@@ -374,11 +378,9 @@ int main() {
         SDL_RenderPresent(renderer);
     }
 
-    // --- Cleanup ---
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
