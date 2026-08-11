@@ -36,7 +36,9 @@ public:
     float horizontalFOV;
 
     // transformation parameters
-    float modelScale;
+    glm::vec3 objectPosition{0.0f, 0.0f, 0.0f};
+    glm::vec3 objectRotation{0.0f, 0.0f, 0.0f}; // Stored in degrees
+    glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 
     // lighting parameters
     float lighting_Diffuse;

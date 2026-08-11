@@ -234,6 +234,12 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
             params.setDisplayNormals(rasterizerWorld.displayNormals);
             updateWindowFlag = true; 
         }
+        
+        ImGui::Separator();
+        ImGui::Text("Object Transformations:");
+        if (ImGui::DragFloat3("Position", &rasterizerWorld.objectPosition.x, 0.1f)) { updateWindowFlag = true; }
+        if (ImGui::DragFloat3("Rotation", &rasterizerWorld.objectRotation.x, 1.0f)) { updateWindowFlag = true; }
+        if (ImGui::DragFloat3("Scale", &rasterizerWorld.objectScale.x, 0.05f)) { updateWindowFlag = true; }
     }
     ImGui::End();
 }
@@ -340,7 +346,7 @@ int main() {
     rasterizerWorld.cameraLookAtCenter = DefaultParams::cameraLookAtCenter;
     rasterizerWorld.cameraUp = DefaultParams::cameraUp;
     rasterizerWorld.horizontalFOV = DefaultParams::horizontalFOV;
-    rasterizerWorld.modelScale = DefaultParams::modelScale;
+    rasterizerWorld.objectScale = glm::vec3(DefaultParams::modelScale);
 
     rasterizerWorld.lighting_Diffuse = DefaultParams::lighting_Diffuse;
     rasterizerWorld.lighting_Specular = DefaultParams::lighting_Specular;

@@ -4,6 +4,7 @@
 #include "Utilities.h"
 #include <iostream>
 #include <algorithm>
+#include <glm/gtc/matrix_inverse.hpp>
 
 RasterizationExerciseEnum ObjectModel::exercise;
 
@@ -173,11 +174,12 @@ void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexDat
 
 void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const PlotPixelCallback& plotPixel, VertexData& vertex) {
 
-    // transformation normal from object coordinates to eye coordinates v->normal
-    // --> v->NormalEyeCoordinates
+    // Combine model and view transforms to move object-space normals into eye space
     glm::mat4 modelviewM(lookatM * modelM);
-    glm::mat3 modelviewM3x3(modelviewM);
-    vertex.normalEyeCoordinates = modelviewM3x3 * vertex.normalObjectCoordinates;
+
+    // Normals use the inverse-transpose so non-uniform model scaling preserves perpendicularity
+    glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3(modelviewM));
+    vertex.normalEyeCoordinates = glm::normalize(normalMatrix * vertex.normalObjectCoordinates);
 
     if (rasterizerWorld -> displayNormals) {
         // drawing normals

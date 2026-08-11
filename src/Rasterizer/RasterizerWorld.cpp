@@ -22,6 +22,28 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
     clearZbuffer();
     object1 -> initTransformations();
 
+    // Pivot Point Transformations
+    glm::vec3 objectCenter = object1 -> getBoundingBoxCenter();
+    glm::mat4 identity(1.0f);
+
+    // Translate the object's center to the world origin
+    glm::mat4 toOrigin = glm::translate(identity, -objectCenter);
+    glm::mat4 backFromOrigin = glm::translate(identity, objectCenter);
+    
+    // Create Rotation matrices
+    glm::mat4 rotX = glm::rotate(identity, glm::radians(objectRotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::mat4 rotY = glm::rotate(identity, glm::radians(objectRotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 rotZ = glm::rotate(identity, glm::radians(objectRotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 rotationM = rotZ * rotY * rotX;
+
+    // Create Scale and World Translation matrices
+    glm::mat4 scaleM = glm::scale(identity, objectScale);
+    glm::mat4 worldPosM = glm::translate(identity, objectPosition);
+
+    // Apply scale & rotation around the center, then move it to the requested world position
+    glm::mat4 modelM = worldPosM * backFromOrigin * rotationM * scaleM * toOrigin;
+    object1 -> setModelM(modelM);
+
     if (projectionType == ProjectionTypeEnum::ORTHOGRAPHIC) {
         glm::mat4 orthoM = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, 0.0f, 100.0f);
         object1 -> setProjectionM(orthoM);
