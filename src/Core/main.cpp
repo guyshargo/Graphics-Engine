@@ -60,22 +60,25 @@ void handleInputEvents(SDL_Event& event, bool& isRunning, EngineMode currentMode
     }
 }
 
-void handleOpenFile(SavedParams& params, RayTracerWorld& rayTracerWorld, bool& isRtLoaded, bool& updateWindowFlag) {
-    std::string rtDir = std::filesystem::absolute("../../RT_Models").string();
-    std::string newPath = Utilities::openFileChooser("model", rtDir);
-    if (!newPath.empty()) {
-        params.setRtModelFileName(Utilities::getRelativePath(newPath));
-        isRtLoaded = rayTracerWorld.load(params.getRtModelFileName());
-        updateWindowFlag = true;
-    }
-}
+void handleOpenFile(EngineMode& currentMode, SavedParams& params, RayTracerWorld& rayTracerWorld, RasterizerWorld& rasterizerWorld, 
+                                bool& isRastLoaded, bool& isRtLoaded, bool& updateWindowFlag) {
 
-void handleOpenFileRasterizer(SavedParams& params, RasterizerWorld& rasterizerWorld, bool& isRastLoaded, bool& updateWindowFlag) {
-    std::string rastDir = std::filesystem::absolute("../../RAST_Models").string();
-    std::string newPath = Utilities::openFileChooser("model", rastDir);
+    std::string modelsDir = (currentMode == EngineMode::RASTERIZATION) ? std::filesystem::absolute("../../RAST_Models").string() 
+                                                                        : std::filesystem::absolute("../../RT_Models").string();
+
+    std::string newPath = Utilities::openFileChooser("model", modelsDir);
+
     if (!newPath.empty()) {
-        params.setRastModelFileName(Utilities::getRelativePath(newPath));
-        isRastLoaded = rasterizerWorld.load(params.getRastModelFileName());
+
+        std::string relativePath = Utilities::getRelativePath(newPath);
+        params.setModelFileName(currentMode, relativePath);
+
+        if (currentMode == EngineMode::RASTERIZATION) {
+            isRastLoaded = rasterizerWorld.load(relativePath);
+        } else {
+            isRtLoaded = rayTracerWorld.load(relativePath);
+        }
+
         updateWindowFlag = true;
     }
 }
@@ -98,7 +101,7 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
 
     if (currentMode == EngineMode::RAY_TRACING) {
         if (ImGui::Button("Open RT Model")) {
-            handleOpenFile(params, rayTracerWorld, isRtLoaded, updateWindowFlag);
+            handleOpenFile(currentMode, params, rayTracerWorld, rasterizerWorld, isRastLoaded, isRtLoaded, updateWindowFlag);
         }
         ImGui::TextWrapped("Model: %s", params.getRtModelFileName().c_str());
 
@@ -108,7 +111,7 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
                 bool isSelected = (selectedRtExercise == static_cast<int>(val));
                 if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
                     selectedRtExercise = static_cast<int>(val);
-                    params.setRtExercise(static_cast<RayTracingExerciseEnum>(selectedRtExercise));
+                    params.setExercise(currentMode, selectedRtExercise);
                     rayTracerWorld.setExercise(params.getRtExercise());
                     updateWindowFlag = true;
                 }
@@ -182,7 +185,7 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
     }
     else {
         if (ImGui::Button("Open Rast Model")) {
-            handleOpenFileRasterizer(params, rasterizerWorld, isRastLoaded, updateWindowFlag);
+            handleOpenFile(currentMode, params, rayTracerWorld, rasterizerWorld, isRastLoaded, isRtLoaded, updateWindowFlag);
         }
         ImGui::TextWrapped("Model: %s", params.getRastModelFileName().c_str());
 
@@ -192,7 +195,7 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
                 bool isSelected = (selectedRastExercise == static_cast<int>(val));
                 if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
                     selectedRastExercise = static_cast<int>(val);
-                    params.setRastExercise(static_cast<RasterizationExerciseEnum>(selectedRastExercise));
+                    params.setExercise(currentMode, selectedRastExercise);
                     rasterizerWorld.exercise = params.getRastExercise();
                     updateWindowFlag = true;
                 }

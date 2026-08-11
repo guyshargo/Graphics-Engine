@@ -131,13 +131,20 @@ public:
         saveToFile();
     }
 
-    void setRtModelFileName(const std::string& name) {
-        rtModelFileName = name;
+    void setModelFileName(EngineMode currentMode, const std::string& fileName) {
+        if (currentMode == EngineMode::RASTERIZATION)
+            rastModelFileName = fileName;
+        else
+            rtModelFileName = fileName;
+
         saveToFile();
     }
 
-    void setRastModelFileName(const std::string& name) {
-        rastModelFileName = name;
+    void setExercise(EngineMode currentMode, int exerciseValue) {
+        if (currentMode == EngineMode::RASTERIZATION)
+            rastExercise = static_cast<RasterizationExerciseEnum>(exerciseValue);
+        else
+            rtExercise = static_cast<RayTracingExerciseEnum>(exerciseValue);
         saveToFile();
     }
 
@@ -153,16 +160,6 @@ public:
 
     void setSoftShadowSamples(int samples) {
         softShadowSamples = samples;
-        saveToFile();
-    }
-
-    void setRtExercise(RayTracingExerciseEnum ex) {
-        rtExercise = ex;
-        saveToFile();
-    }
-
-    void setRastExercise(RasterizationExerciseEnum ex) {
-        rastExercise = ex;
         saveToFile();
     }
 
