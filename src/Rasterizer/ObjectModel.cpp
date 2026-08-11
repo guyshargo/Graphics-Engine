@@ -121,13 +121,36 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
             vertexProcessing(plotPixel, vertexData);
         }
 
+        // Define the Near Plane in Eye Coordinates (Camera looks to negative Z)
+        glm::vec3 nearPlanePoint(0.0f, 0.0f, -0.1f); // Placed slightly in front of the camera
+        glm::vec3 nearPlaneNormal(0.0f, 0.0f, -1.0f);
+
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
-            rasterization(plotPixel, 
-                          verticesData[face.indices[0]],
-                          verticesData[face.indices[1]],
-                          verticesData[face.indices[2]],
-                          face.color);
+
+            // Assemble the initial triangle
+            std::array<VertexData, 3> triangle = {
+                verticesData[face.indices[0]],
+                verticesData[face.indices[1]],
+                verticesData[face.indices[2]]
+            };
+
+            // Clip the triangle against the Near Plane
+            std::vector<std::array<VertexData, 3>> clippedTriangles = clipTriangleAgainstPlane(nearPlanePoint, nearPlaneNormal, triangle);
+
+            // Finish processing and rasterize all surviving triangles
+            for (auto& clippedTri : clippedTriangles) {
+                
+                finalizeVertex(plotPixel, clippedTri[0]);
+                finalizeVertex(plotPixel, clippedTri[1]);
+                finalizeVertex(plotPixel, clippedTri[2]);
+
+                rasterization(plotPixel, 
+                              clippedTri[0],
+                              clippedTri[1],
+                              clippedTri[2],
+                              face.color);
+            }
         }
     }
 }
@@ -144,6 +167,25 @@ void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexDat
     homoPointObj = lookatM * homoPointObj;
     vertex.pointEyeCoordinates = glm::vec3(homoPointObj);
 
+    // Calculate Normal in Eye Coordinates
+    glm::mat4 modelviewM(lookatM * modelM);
+    glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3(modelviewM));
+    vertex.normalEyeCoordinates = glm::normalize(normalMatrix * vertex.normalObjectCoordinates);
+
+    // calculate lighting for a vertex for 'gourard shading'
+    if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
+        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
+                                                rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
+                                                rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
+
+        vertex.lightingIntensity0to1 = vertexLighting;
+    }
+}
+
+void ObjectModel::finalizeVertex(const PlotPixelCallback& plotPixel, VertexData& vertex) {
+    
+    glm::vec4 homoPointObj(vertex.pointEyeCoordinates, 1.0f);
+
     // projection transform: orthographic\perspective -> clip coordinates
     homoPointObj = projectionM * homoPointObj;
 
@@ -159,38 +201,15 @@ void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexDat
     homoPointObj = viewportM * homoPointObj;
     vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
 
-    // transformation normal from object coordinates to eye coordinates v->normal
-    transformNormalFromObjectCoordToEyeCoordAndDrawIt(plotPixel, vertex);
-
-    // calculate lighting for a vertex for 'gourard shading'
-    if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
-        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
-                                                rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
-                                                rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
-
-        vertex.lightingIntensity0to1 = vertexLighting;
-    }
-}
-
-void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const PlotPixelCallback& plotPixel, VertexData& vertex) {
-
-    // Combine model and view transforms to move object-space normals into eye space
-    glm::mat4 modelviewM(lookatM * modelM);
-
-    // Normals use the inverse-transpose so non-uniform model scaling preserves perpendicularity
-    glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3(modelviewM));
-    vertex.normalEyeCoordinates = glm::normalize(normalMatrix * vertex.normalObjectCoordinates);
-
+    // draw normals
     if (rasterizerWorld -> displayNormals) {
-        // drawing normals
         glm::vec4 t2(vertex.pointEyeCoordinates + vertex.normalEyeCoordinates * 0.1f, 1);
         
-        // projection transform
         t2 = projectionM * t2;
         if (t2.w != 0) {
             t2 /= t2.w;
         } else {
-        std::cerr << "Division by w == 0 in vertexProcessing normal transformation" << std::endl;
+            std::cerr << "Division by w == 0 in normal transformation" << std::endl;
         }
 
         t2 = viewportM * t2;
@@ -199,12 +218,82 @@ void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const PlotPi
     }
 }
 
+void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
+
+    int x1 = static_cast<int>(std::round(p1.x));
+    int x2 = static_cast<int>(std::round(p2.x));
+    int y1 = static_cast<int>(std::round(p1.y));
+    int y2 = static_cast<int>(std::round(p2.y));
+
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+
+    // First check if switching points is needed
+    if (dy < -dx) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+
+        dx = x2 - x1;
+        dy = y2 - y1;
+    }
+
+    if (std::abs(dy) <= std::abs(dx)) {
+        int yInceremnt = 1;
+
+        if (dy < 0) {
+            yInceremnt = -1;
+            dy = -dy;
+        }
+        int y = y1;
+        int diff = 2*dy - dx;
+
+        for (int stepX = x1; stepX <= x2; stepX++) {
+            plotPixel(stepX, y, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dy;
+
+            } else {
+                y += yInceremnt;
+                diff += 2*dy - 2*dx;
+            }
+        }
+
+    } else {
+        int xInceremnt = 1;
+
+        if (dx < 0) {
+            xInceremnt = -1;
+            dx = -dx;
+        }
+
+        int x = x1;
+        int diff = 2*dx - dy;
+
+        for (int stepY = y1; stepY <= y2; stepY++) {
+            plotPixel(x, stepY, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dx;
+            } else {
+                x += xInceremnt;
+                diff += 2*dx - 2*dy;
+            }
+        }
+    }   
+}
+
 void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
                                 const VertexData& vertex3, const glm::vec3& faceColor) {
     
     // normal for entire polygon face for 'flat shading'
     glm::vec3 faceNormal = glm::normalize(glm::cross(vertex2.pointEyeCoordinates - vertex1.pointEyeCoordinates, 
                                                     vertex3.pointEyeCoordinates - vertex1.pointEyeCoordinates));
+
+    // Back-face culling so triangle faces which are faced backwards will be skipped
+    if (faceNormal.z <= 0.0f) {
+        return;
+    }
     
     // lines rasterization: draw white lines between polygon vertices
     if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_EDGES) {
@@ -406,74 +495,6 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     return glm::vec3();
 }
 
-void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
-
-    int x1 = static_cast<int>(std::round(p1.x));
-    int x2 = static_cast<int>(std::round(p2.x));
-    int y1 = static_cast<int>(std::round(p1.y));
-    int y2 = static_cast<int>(std::round(p2.y));
-
-    int dx = x2 - x1;
-    int dy = y2 - y1;
-
-    // First check if switching points is needed
-    if (dy < -dx) {
-        std::swap(x1, x2);
-        std::swap(y1, y2);
-
-        dx = x2 - x1;
-        dy = y2 - y1;
-    }
-
-    if (std::abs(dy) <= std::abs(dx)) {
-        int yInceremnt = 1;
-
-        if (dy < 0) {
-            yInceremnt = -1;
-            dy = -dy;
-        }
-
-        int y = y1;
-        int diff = 2*dy - dx;
-
-        for (int stepX = x1; stepX <= x2; stepX++) {
-            plotPixel(stepX, y, glm::vec3(r, g, b));
-
-            if (diff < 0) {
-                diff += 2*dy;
-
-            } else {
-                y += yInceremnt;
-                diff += 2*dy - 2*dx;
-            }
-        }
-
-    } else {
-
-        int xInceremnt = 1;
-
-        if (dx < 0) {
-            xInceremnt = -1;
-            dx = -dx;
-        }
-
-        int x = x1;
-        int diff = 2*dx - dy;
-
-        for (int stepY = y1; stepY <= y2; stepY++) {
-            plotPixel(x, stepY, glm::vec3(r, g, b));
-
-            if (diff < 0) {
-                diff += 2*dx;
-
-            } else {
-                x += xInceremnt;
-                diff += 2*dx - 2*dy;
-            }
-        }
-    }   
-}
-
 // calc 4 vertices of bounding box of polygon
 glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, 
                                         int imageWidth, int imageHeight) {
@@ -487,4 +508,103 @@ glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2
     int maxY = static_cast<int>(glm::ceil(glm::min(static_cast<float>(imageHeight - 1), glm::max(p1.y, glm::max(p2.y, p3.y)))));
 
     return glm::ivec4(minX, maxX, minY, maxY);
+}
+
+VertexData ObjectModel::interpolateVertex(const VertexData& v1, const VertexData& v2, float interpolationWeight) {
+
+    VertexData interpolatedVertex = v1; // Copy base structure
+    
+    // Linear Interpolation for all required attributes
+    interpolatedVertex.pointEyeCoordinates = glm::mix(v1.pointEyeCoordinates, v2.pointEyeCoordinates, interpolationWeight);
+    interpolatedVertex.normalEyeCoordinates = glm::normalize(glm::mix(v1.normalEyeCoordinates, v2.normalEyeCoordinates, interpolationWeight));
+    interpolatedVertex.textureCoordinates = glm::mix(v1.textureCoordinates, v2.textureCoordinates, interpolationWeight);
+    interpolatedVertex.color = glm::mix(v1.color, v2.color, interpolationWeight);
+    interpolatedVertex.lightingIntensity0to1 = glm::mix(v1.lightingIntensity0to1, v2.lightingIntensity0to1, interpolationWeight);
+    
+    return interpolatedVertex;
+}
+
+std::vector<std::array<VertexData, 3>> ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, 
+                                                                std::array<VertexData, 3>& inputTriangle) {
+
+    std::vector<std::array<VertexData, 3>> resultingTriangles;
+    
+    // Get the distance from a vertex to the plane
+    auto calculateDistanceToPlane = [&](const glm::vec3& vertexPosition) {
+        return glm::dot(planeNormal, vertexPosition - planePoint);
+    };
+
+    // Categorize vertices into "inside" (visible) and "outside" (invisible) lists
+    std::vector<VertexData> insideVertices;
+    std::vector<VertexData> outsideVertices;
+
+    for (int i = 0; i < 3; i++) {
+        float distance = calculateDistanceToPlane(inputTriangle[i].pointEyeCoordinates);
+        if (distance >= 0.0f) {
+            insideVertices.push_back(inputTriangle[i]);
+        } else {
+            outsideVertices.push_back(inputTriangle[i]);
+        }
+    }
+
+    // Triangle is entirely outside the plane -> discard it
+    if (insideVertices.empty()) {
+        return resultingTriangles; 
+    }
+
+    // Triangle is entirely inside the plane -> keep it as is
+    if (insideVertices.size() == 3) {
+        resultingTriangles.push_back(inputTriangle);
+        return resultingTriangles;
+    }
+
+    // One vertex is inside, two are outside -> clip into a single smaller triangle
+    if (insideVertices.size() == 1 && outsideVertices.size() == 2) {
+        VertexData validVertex = insideVertices[0];
+        VertexData invalidVertex1 = outsideVertices[0];
+        VertexData invalidVertex2 = outsideVertices[1];
+
+        // Get distances to calculate exactly where the edges intersect the plane
+        float validDistance = calculateDistanceToPlane(validVertex.pointEyeCoordinates);
+        float invalidDistance1 = calculateDistanceToPlane(invalidVertex1.pointEyeCoordinates);
+        float invalidDistance2 = calculateDistanceToPlane(invalidVertex2.pointEyeCoordinates);
+
+        // Calculate the interpolation weights
+        float interpolationRatio1 = validDistance / (validDistance - invalidDistance1);
+        float interpolationRatio2 = validDistance / (validDistance - invalidDistance2);
+        
+        // Generate the new vertices directly on the plane boundary
+        VertexData newVertex1 = interpolateVertex(validVertex, invalidVertex1, interpolationRatio1);
+        VertexData newVertex2 = interpolateVertex(validVertex, invalidVertex2, interpolationRatio2);
+        
+        resultingTriangles.push_back({validVertex, newVertex1, newVertex2});
+        return resultingTriangles;
+    }
+    
+    // Two vertices are inside, one is outside -> split into two triangles
+    if (insideVertices.size() == 2 && outsideVertices.size() == 1) {
+        VertexData validVertex1 = insideVertices[0];
+        VertexData validVertex2 = insideVertices[1];
+        VertexData invalidVertex = outsideVertices[0];
+
+        // Get distances
+        float validDistance1 = calculateDistanceToPlane(validVertex1.pointEyeCoordinates);
+        float validDistance2 = calculateDistanceToPlane(validVertex2.pointEyeCoordinates);
+        float invalidDistance = calculateDistanceToPlane(invalidVertex.pointEyeCoordinates);
+
+        // Calculate the interpolation ratios
+        float interpolationRatio1 = validDistance1 / (validDistance1 - invalidDistance);
+        float interpolationRatio2 = validDistance2 / (validDistance2 - invalidDistance);
+        
+        // Generate the new vertices directly on the plane boundary
+        VertexData newVertex1 = interpolateVertex(validVertex1, invalidVertex, interpolationRatio1);
+        VertexData newVertex2 = interpolateVertex(validVertex2, invalidVertex, interpolationRatio2);
+        
+        // Break the resulting quadrilateral into two valid triangles[cite: 28]
+        resultingTriangles.push_back({validVertex1, validVertex2, newVertex1});
+        resultingTriangles.push_back({validVertex2, newVertex2, newVertex1});
+        return resultingTriangles;
+    }
+
+    return resultingTriangles;
 }
