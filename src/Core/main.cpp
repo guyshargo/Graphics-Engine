@@ -66,7 +66,8 @@ void handleOpenFile(EngineMode& currentMode, SavedParams& params, RayTracerWorld
     std::string modelsDir = (currentMode == EngineMode::RASTERIZATION) ? std::filesystem::absolute("../../RAST_Models").string() 
                                                                         : std::filesystem::absolute("../../RT_Models").string();
 
-    std::string newPath = Utilities::openFileChooser("model", modelsDir);
+    std::string newPath = (currentMode == EngineMode::RASTERIZATION) ? Utilities::openFileChooser("obj", modelsDir)
+                                                                        : Utilities::openFileChooser("model", modelsDir);
 
     if (!newPath.empty()) {
 
@@ -233,6 +234,12 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
             params.setDisplayNormals(rasterizerWorld.displayNormals);
             updateWindowFlag = true; 
         }
+        
+        ImGui::Separator();
+        ImGui::Text("Object Transformations:");
+        if (ImGui::DragFloat3("Position", &rasterizerWorld.objectPosition.x, 0.1f)) { updateWindowFlag = true; }
+        if (ImGui::DragFloat3("Rotation", &rasterizerWorld.objectRotation.x, 1.0f)) { updateWindowFlag = true; }
+        if (ImGui::DragFloat3("Scale", &rasterizerWorld.objectScale.x, 0.05f)) { updateWindowFlag = true; }
     }
     ImGui::End();
 }
@@ -338,13 +345,13 @@ int main() {
     rasterizerWorld.cameraPos = DefaultParams::cameraPos;
     rasterizerWorld.cameraLookAtCenter = DefaultParams::cameraLookAtCenter;
     rasterizerWorld.cameraUp = DefaultParams::cameraUp;
-    rasterizerWorld.horizontalFOV = DefaultParams::horizontalFOV;
-    rasterizerWorld.modelScale = DefaultParams::modelScale;
+    rasterizerWorld.horizontalFOV = DefaultParams::HORIZONTAL_FOV;
+    rasterizerWorld.objectScale = glm::vec3(DefaultParams::MODEL_SCALE);
 
-    rasterizerWorld.lighting_Diffuse = DefaultParams::lighting_Diffuse;
-    rasterizerWorld.lighting_Specular = DefaultParams::lighting_Specular;
-    rasterizerWorld.lighting_Ambient = DefaultParams::lighting_Ambient;
-    rasterizerWorld.lighting_sHininess = DefaultParams::lighting_sHininess;
+    rasterizerWorld.lighting_Diffuse = DefaultParams::LIGHTING_DIFFUSE;
+    rasterizerWorld.lighting_Specular = DefaultParams::LIGHTING_SPECULAR;
+    rasterizerWorld.lighting_Ambient = DefaultParams::LIGHTING_AMBIENT;
+    rasterizerWorld.lighting_sHininess = DefaultParams::LIGHTING_SHININESS;
     rasterizerWorld.lightPositionWorldCoordinates = DefaultParams::lightPosition;
 
     rasterizerWorld.projectionType = params.getProjectionType();

@@ -33,12 +33,12 @@ public:
     bool load(const std::string& fileName);
     bool objectHasTexture() const;
 
-    using SetPixelCallback = std::function<void(int x, int y, const glm::vec3& color)>;
+    using PlotPixelCallback = std::function<void(int x, int y, const glm::vec3& color)>;
     using TextureGetPixel = std::function<glm::vec3(int x, int y)>;
     using TextureGetDimension = std::function<int()>;
     
     void setTextureCallbacks(TextureGetPixel getPixel, TextureGetDimension getWidth, TextureGetDimension getHeight);
-    void render(const SetPixelCallback& setPixel);
+    void render(const PlotPixelCallback& plotPixel);
 
     static RasterizationExerciseEnum exercise;
 
@@ -69,12 +69,14 @@ private:
     glm::vec3 lightPositionEyeCoordinates;
 
     // Helper methods
-    void vertexProcessing(const SetPixelCallback& setPixel, VertexData& vertex);
-    void transformNormalFromObjectCoordToEyeCoordAndDrawIt(const SetPixelCallback& setPixel, VertexData& vertex);
-    void rasterization(const SetPixelCallback& setPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor);
-    
-    glm::vec3 fragmentProcessing(const FragmentData& fragmentData);
+    void vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex);
+    void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor);
+    void finalizeVertex(const PlotPixelCallback& plotPixel, VertexData& vertex);
 
-    static void drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
+    static VertexData interpolateVertex(const VertexData& v1, const VertexData& v2, float interpolationWeight);
+    static std::vector<std::array<VertexData, 3>> clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, std::array<VertexData, 3>& inputTriangle);
+
+    glm::vec3 fragmentProcessing(const FragmentData& fragmentData);
+    static void drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);
 };

@@ -2,8 +2,13 @@
 #include "RasterizerWorld.h"
 #include "BarycentricCoordinates.h"
 #include "Utilities.h"
+#include "PlaneData.h"
+#include "DefaultParams.h"
+#include "YourUtilities.h"
+
 #include <iostream>
 #include <algorithm>
+#include <glm/gtc/matrix_inverse.hpp>
 
 RasterizationExerciseEnum ObjectModel::exercise;
 
@@ -100,9 +105,16 @@ bool ObjectModel::load(const std::string& fileName) {
 
 bool ObjectModel::objectHasTexture() const { return hasTexture; }
 
-void ObjectModel::render(const SetPixelCallback& setPixel) {
+void ObjectModel::render(const PlotPixelCallback& plotPixel) {
 
     exercise = rasterizerWorld -> exercise;
+
+    std::vector<Plane> viewingPlanes = YourUtilities::getViewPlanes(
+        DefaultParams::HORIZONTAL_FOV,
+        DefaultParams::ASPECT_RATIO, 
+        DefaultParams::PROJ_NEAR_PLANE, 
+        DefaultParams::PROJ_FAR_PLANE
+    );
 
     // homogenic vector of light position for transformations
     glm::vec4 homoLightPos(rasterizerWorld -> lightPositionWorldCoordinates, 1.0f);
@@ -117,21 +129,58 @@ void ObjectModel::render(const SetPixelCallback& setPixel) {
 
         // going through all vertices to figure out where they are on the screen
         for (VertexData& vertexData : verticesData) {
-            vertexProcessing(setPixel, vertexData);
+            vertexProcessing(plotPixel, vertexData);
         }
 
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
-            rasterization(setPixel, 
-                          verticesData[face.indices[0]],
-                          verticesData[face.indices[1]],
-                          verticesData[face.indices[2]],
-                          face.color);
+
+            // Assemble the initial triangle into a list of "surviving" triangles
+            std::vector<std::array<VertexData, 3>> survivingTriangles;
+
+            survivingTriangles.push_back({
+                verticesData[face.indices[0]],
+                verticesData[face.indices[1]],
+                verticesData[face.indices[2]]
+            });
+
+            // Pass the triangles through all 6 clipping planes
+            for (const Plane& plane : viewingPlanes) {
+                
+                std::vector<std::array<VertexData, 3>> nextTriangles;
+                
+                for (auto& triangle : survivingTriangles) {
+                    auto clipped = clipTriangleAgainstPlane(plane.pointOnPlane, plane.normal, triangle);
+                    nextTriangles.insert(nextTriangles.end(), clipped.begin(), clipped.end());
+                }
+                
+                survivingTriangles = nextTriangles;
+                
+                // If triangle is entirely outside the viewing volume, stop checking planes
+                if (survivingTriangles.empty()) {
+                    break;
+                }
+            }
+
+            // Finish processing and rasterize all surviving triangles
+            for (auto& clippedTriangle : survivingTriangles) {
+                
+                finalizeVertex(plotPixel, clippedTriangle[0]);
+                finalizeVertex(plotPixel, clippedTriangle[1]);
+                finalizeVertex(plotPixel, clippedTriangle[2]);
+
+                rasterization(plotPixel, 
+                              clippedTriangle[0],
+                              clippedTriangle[1],
+                              clippedTriangle[2],
+                              face.color);
+            }
+
         }
     }
 }
 
-void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData& vertex) {
+void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex) {
 
     // converting vertex to homogeneous coordinates for transformations with 4x4 matrixes
     glm::vec4 homoPointObj(vertex.pointObjectCoordinates, 1.0f);
@@ -142,6 +191,25 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
     // changing view point: world coordinates -> eye(camera) coordinates
     homoPointObj = lookatM * homoPointObj;
     vertex.pointEyeCoordinates = glm::vec3(homoPointObj);
+
+    // Calculate Normal in Eye Coordinates
+    glm::mat4 modelviewM(lookatM * modelM);
+    glm::mat3 normalMatrix = glm::inverseTranspose(glm::mat3(modelviewM));
+    vertex.normalEyeCoordinates = glm::normalize(normalMatrix * vertex.normalObjectCoordinates);
+
+    // calculate lighting for a vertex for 'gourard shading'
+    if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
+        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
+                                                rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
+                                                rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
+
+        vertex.lightingIntensity0to1 = vertexLighting;
+    }
+}
+
+void ObjectModel::finalizeVertex(const PlotPixelCallback& plotPixel, VertexData& vertex) {
+    
+    glm::vec4 homoPointObj(vertex.pointEyeCoordinates, 1.0f);
 
     // projection transform: orthographic\perspective -> clip coordinates
     homoPointObj = projectionM * homoPointObj;
@@ -158,57 +226,105 @@ void ObjectModel::vertexProcessing(const SetPixelCallback& setPixel, VertexData&
     homoPointObj = viewportM * homoPointObj;
     vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
 
-    // transformation normal from object coordinates to eye coordinates v->normal
-    transformNormalFromObjectCoordToEyeCoordAndDrawIt(setPixel, vertex);
-
-    // calculate lighting for a vertex for 'gourard shading'
-    if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
-        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
-                                                rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
-                                                rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
-
-        vertex.lightingIntensity0to1 = vertexLighting;
-    }
-}
-
-void ObjectModel::transformNormalFromObjectCoordToEyeCoordAndDrawIt(const SetPixelCallback& setPixel, VertexData& vertex) {
-
-    // transformation normal from object coordinates to eye coordinates v->normal
-    // --> v->NormalEyeCoordinates
-    glm::mat4 modelviewM(lookatM * modelM);
-    glm::mat3 modelviewM3x3(modelviewM);
-    vertex.normalEyeCoordinates = modelviewM3x3 * vertex.normalObjectCoordinates;
-
+    // draw normals
     if (rasterizerWorld -> displayNormals) {
-        // drawing normals
         glm::vec4 t2(vertex.pointEyeCoordinates + vertex.normalEyeCoordinates * 0.1f, 1);
         
-        // projection transform
         t2 = projectionM * t2;
         if (t2.w != 0) {
             t2 /= t2.w;
         } else {
-        std::cerr << "Division by w == 0 in vertexProcessing normal transformation" << std::endl;
+            std::cerr << "Division by w == 0 in normal transformation" << std::endl;
         }
 
         t2 = viewportM * t2;
         glm::vec3 point_plusNormal_screen(t2);
-        drawLineDDA(setPixel, vertex.pointWindowCoordinates, point_plusNormal_screen, 0, 0, 1.0f);
+        drawLineBresenham(plotPixel, vertex.pointWindowCoordinates, point_plusNormal_screen, 0, 0, 1.0f);
     }
 }
 
-void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexData& vertex1, const VertexData& vertex2, 
+void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
+
+    int x1 = static_cast<int>(std::round(p1.x));
+    int x2 = static_cast<int>(std::round(p2.x));
+    int y1 = static_cast<int>(std::round(p1.y));
+    int y2 = static_cast<int>(std::round(p2.y));
+
+    int dx = x2 - x1;
+    int dy = y2 - y1;
+
+    // First check if switching points is needed
+    if (dy < -dx) {
+        std::swap(x1, x2);
+        std::swap(y1, y2);
+
+        dx = x2 - x1;
+        dy = y2 - y1;
+    }
+
+    if (std::abs(dy) <= std::abs(dx)) {
+        int yInceremnt = 1;
+
+        if (dy < 0) {
+            yInceremnt = -1;
+            dy = -dy;
+        }
+        int y = y1;
+        int diff = 2*dy - dx;
+
+        for (int stepX = x1; stepX <= x2; stepX++) {
+            plotPixel(stepX, y, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dy;
+
+            } else {
+                y += yInceremnt;
+                diff += 2*dy - 2*dx;
+            }
+        }
+
+    } else {
+        int xInceremnt = 1;
+
+        if (dx < 0) {
+            xInceremnt = -1;
+            dx = -dx;
+        }
+
+        int x = x1;
+        int diff = 2*dx - dy;
+
+        for (int stepY = y1; stepY <= y2; stepY++) {
+            plotPixel(x, stepY, glm::vec3(r, g, b));
+
+            if (diff < 0) {
+                diff += 2*dx;
+            } else {
+                x += xInceremnt;
+                diff += 2*dx - 2*dy;
+            }
+        }
+    }   
+}
+
+void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
                                 const VertexData& vertex3, const glm::vec3& faceColor) {
     
     // normal for entire polygon face for 'flat shading'
     glm::vec3 faceNormal = glm::normalize(glm::cross(vertex2.pointEyeCoordinates - vertex1.pointEyeCoordinates, 
                                                     vertex3.pointEyeCoordinates - vertex1.pointEyeCoordinates));
+
+    // Back-face culling so triangle faces which are faced backwards will be skipped
+    if (faceNormal.z <= 0.0f) {
+        return;
+    }
     
     // lines rasterization: draw white lines between polygon vertices
     if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_EDGES) {
-        drawLineDDA(setPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineDDA(setPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineDDA(setPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        drawLineBresenham(plotPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
     
     // Polygon faces
     } else {
@@ -285,7 +401,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                             if (!hasTexture) {
                                 // No texture available
                                 glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                setPixel(x, y, magenta);
+                                plotPixel(x, y, magenta);
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
                                 continue;
                             }
@@ -302,7 +418,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                             if (!hasTexture) {
                                 // No texture available
                                 glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                setPixel(x, y, magenta);
+                                plotPixel(x, y, magenta);
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
                                 continue;
                             }
@@ -331,7 +447,7 @@ void ObjectModel::rasterization(const SetPixelCallback& setPixel, const VertexDa
                         glm::vec3 pixelColor = fragmentProcessing(fragmentData);
 
                         // paint pixel and set zBuffer to current pixel's
-                        setPixel(x, y, pixelColor);
+                        plotPixel(x, y, pixelColor);
                         rasterizerWorld -> zBuffer[zBufferIndex] = zDepth;
                     }
                 }
@@ -404,55 +520,6 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     return glm::vec3();
 }
 
-void ObjectModel::drawLineDDA(const SetPixelCallback& setPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
-
-    int x1round = static_cast<int>(std::round(p1.x));
-    int x2round = static_cast<int>(std::round(p2.x));
-    int y1round = static_cast<int>(std::round(p1.y));
-    int y2round = static_cast<int>(std::round(p2.y));
-
-    int dx = x2round - x1round;
-    int dy = y2round - y1round;
-
-    // First check if switching points is needed
-    if ((dy < -dx) || ((dy == -dx) && (dx < 0))) {
-
-        // Switch between p1 and p2
-        int tempX1 = x1round;
-        x1round = x2round;
-        x2round = tempX1;
-        int tempY1 = y1round;
-        y1round = y2round;
-        y2round = tempY1;
-
-        // Recalculate dx, dy with switched points
-        dx = x2round - x1round;
-        dy = y2round - y1round;
-    }
-
-    // Second check to implement via X axis
-    if (std::abs(dy) <= std::abs(dx)) {
-        float a = (float) dy/dx;
-        float y = y1round;
-        
-        for (int x = x1round; x <= x2round; x++) {
-            setPixel(x, std::round(y), glm::vec3(r, g, b));
-            y += a;
-        }
-    }
-
-    // Third check to implement via Y axis
-    else {
-        float a = static_cast<float>(dx) / dy;  // only here 'a' is calculated dx/dy
-        float x = x1round;
-
-        for (int y = y1round; y <= y2round; y++) {
-            setPixel(std::round(x), y, glm::vec3(r, g, b));
-            x += a;
-        }
-    }
-}
-
 // calc 4 vertices of bounding box of polygon
 glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, 
                                         int imageWidth, int imageHeight) {
@@ -466,4 +533,75 @@ glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2
     int maxY = static_cast<int>(glm::ceil(glm::min(static_cast<float>(imageHeight - 1), glm::max(p1.y, glm::max(p2.y, p3.y)))));
 
     return glm::ivec4(minX, maxX, minY, maxY);
+}
+
+VertexData ObjectModel::interpolateVertex(const VertexData& v1, const VertexData& v2, float interpolationWeight) {
+
+    VertexData interpolatedVertex = v1; // Copy base structure
+    
+    // Linear Interpolation for all required attributes
+    interpolatedVertex.pointEyeCoordinates = glm::mix(v1.pointEyeCoordinates, v2.pointEyeCoordinates, interpolationWeight);
+    interpolatedVertex.normalEyeCoordinates = glm::normalize(glm::mix(v1.normalEyeCoordinates, v2.normalEyeCoordinates, interpolationWeight));
+    interpolatedVertex.textureCoordinates = glm::mix(v1.textureCoordinates, v2.textureCoordinates, interpolationWeight);
+    interpolatedVertex.color = glm::mix(v1.color, v2.color, interpolationWeight);
+    interpolatedVertex.lightingIntensity0to1 = glm::mix(v1.lightingIntensity0to1, v2.lightingIntensity0to1, interpolationWeight);
+    
+    return interpolatedVertex;
+}
+
+std::vector<std::array<VertexData, 3>> ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, 
+                                                                std::array<VertexData, 3>& inputTriangle) {
+
+    std::vector<std::array<VertexData, 3>> resultingTriangles;
+    
+    // Get the distance from a vertex to the plane
+    auto calculateDistanceToPlane = [&](const glm::vec3& vertexPosition) {
+        return glm::dot(planeNormal, vertexPosition - planePoint);
+    };
+
+    // List to store the vertices of the clipped polygon
+    std::vector<VertexData> outputPolygon;
+    outputPolygon.reserve(4);
+
+    // Walk through the edges of the triangle sequentially
+    for (int i = 0; i < 3; i++) {
+        int prevIndex = (i == 0) ? 2 : i - 1;
+        VertexData currentVertex = inputTriangle[i];
+        VertexData prevVertex = inputTriangle[prevIndex];
+
+        float distCurrent = calculateDistanceToPlane(currentVertex.pointEyeCoordinates);
+        float distPrev = calculateDistanceToPlane(prevVertex.pointEyeCoordinates);
+
+        // If the current vertex is inside the viewing volume
+        if (distCurrent >= 0.0f) {
+
+            // If the previous vertex was outside, we crossed the plane going in - add the intersection point
+            if (distPrev < 0.0f) {
+                float t = distPrev / (distPrev - distCurrent);
+                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+            }
+            // Add the valid current vertex
+            outputPolygon.push_back(currentVertex);
+        }
+        // If the current vertex is outside the viewing volume
+        else {
+            // If the previous vertex was inside, we crossed the plane going out - add the intersection point
+            if (distPrev >= 0.0f) {
+                float t = distPrev / (distPrev - distCurrent);
+                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+            }
+        }
+    }
+
+    // break the resulting polygon back down into valid triangles
+   if (outputPolygon.size() == 3) {
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
+    } 
+    else if (outputPolygon.size() == 4) {
+        // split it into 2 triangles
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[2], outputPolygon[3]});
+    }
+
+    return resultingTriangles;
 }
