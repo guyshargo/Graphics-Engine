@@ -1,5 +1,7 @@
 #include "RasterizerWorld.h"
 #include "YourUtilities.h" 
+#include "DefaultParams.h"
+
 #include <limits>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
@@ -45,7 +47,7 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
     object1 -> setModelM(modelM);
 
     if (projectionType == ProjectionTypeEnum::ORTHOGRAPHIC) {
-        glm::mat4 orthoM = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, 0.0f, 100.0f);
+        glm::mat4 orthoM = glm::ortho(-1.5f, 1.5f, -1.5f, 1.5f, 0.0f, DefaultParams::PROJ_NEAR_PLANE);
         object1 -> setProjectionM(orthoM);
     }
 
@@ -56,7 +58,11 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
     object1 -> setLookatM(lookatM);
 
     if (projectionType == ProjectionTypeEnum::PERSPECTIVE) {
-        glm::mat4 perspectiveM = glm::perspective(glm::radians(30.0f), 1.0f, 1.0f, 100.0f);
+        glm::mat4 perspectiveM = glm::perspective(glm::radians(DefaultParams::HORIZONTAL_FOV), 
+                                                  DefaultParams::ASPECT_RATIO, 
+                                                  DefaultParams::PROJ_NEAR_PLANE, 
+                                                  DefaultParams::PROJ_FAR_PLANE);
+
         object1 -> setProjectionM(perspectiveM);
     }
 

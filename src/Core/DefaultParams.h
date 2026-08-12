@@ -27,20 +27,23 @@ namespace DefaultParams {
     constexpr float INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER = 5.0f;
     constexpr float CAMERA_MAX_VERTICAL_ANGLE = 60.0f;
 
-    constexpr float cameraRadius = INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER;
-    inline const glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, cameraRadius);
+    constexpr float CAMERA_RADIUS = INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER;
+    inline const glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, CAMERA_RADIUS);
     inline const glm::vec3 cameraLookAtCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     inline const glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
     
-    constexpr float cameraAngleHorizontal = 270.0f;
-    constexpr float cameraAngleVertical = 0.0f;
-    constexpr float horizontalFOV = 45.0f;
-    constexpr float modelScale = 1.0f;
+    constexpr float CAMERA_ANGLE_HORIZONTAL = 270.0f;
+    constexpr float CAMERA_ANGLE_VERTICAL = 0.0f;
+    constexpr float HORIZONTAL_FOV = 30.0f;
+    constexpr float MODEL_SCALE = 1.0f;
+    constexpr float PROJ_NEAR_PLANE = 1.0f;
+    constexpr float PROJ_FAR_PLANE = 100.0f;
+    constexpr float ASPECT_RATIO = static_cast<float>(IMAGE_WIDTH) / static_cast<float>(IMAGE_HEIGHT);
 
-    constexpr float lighting_Diffuse = 0.75f;
-    constexpr float lighting_Specular = 0.2f;
-    constexpr float lighting_Ambient = 0.4f;
-    constexpr float lighting_sHininess = 40.0f;
+    constexpr float LIGHTING_DIFFUSE = 0.75f;
+    constexpr float LIGHTING_SPECULAR = 0.2f;
+    constexpr float LIGHTING_AMBIENT = 0.4f;
+    constexpr float LIGHTING_SHININESS = 40.0f;
     inline const glm::vec3 lightPosition = glm::vec3(10.0f, 10.0f, 10.0f);
 
 }

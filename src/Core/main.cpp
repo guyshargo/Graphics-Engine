@@ -345,13 +345,13 @@ int main() {
     rasterizerWorld.cameraPos = DefaultParams::cameraPos;
     rasterizerWorld.cameraLookAtCenter = DefaultParams::cameraLookAtCenter;
     rasterizerWorld.cameraUp = DefaultParams::cameraUp;
-    rasterizerWorld.horizontalFOV = DefaultParams::horizontalFOV;
-    rasterizerWorld.objectScale = glm::vec3(DefaultParams::modelScale);
+    rasterizerWorld.horizontalFOV = DefaultParams::HORIZONTAL_FOV;
+    rasterizerWorld.objectScale = glm::vec3(DefaultParams::MODEL_SCALE);
 
-    rasterizerWorld.lighting_Diffuse = DefaultParams::lighting_Diffuse;
-    rasterizerWorld.lighting_Specular = DefaultParams::lighting_Specular;
-    rasterizerWorld.lighting_Ambient = DefaultParams::lighting_Ambient;
-    rasterizerWorld.lighting_sHininess = DefaultParams::lighting_sHininess;
+    rasterizerWorld.lighting_Diffuse = DefaultParams::LIGHTING_DIFFUSE;
+    rasterizerWorld.lighting_Specular = DefaultParams::LIGHTING_SPECULAR;
+    rasterizerWorld.lighting_Ambient = DefaultParams::LIGHTING_AMBIENT;
+    rasterizerWorld.lighting_sHininess = DefaultParams::LIGHTING_SHININESS;
     rasterizerWorld.lightPositionWorldCoordinates = DefaultParams::lightPosition;
 
     rasterizerWorld.projectionType = params.getProjectionType();

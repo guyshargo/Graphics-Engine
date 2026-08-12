@@ -2,6 +2,10 @@
 #include "RasterizerWorld.h"
 #include "BarycentricCoordinates.h"
 #include "Utilities.h"
+#include "PlaneData.h"
+#include "DefaultParams.h"
+#include "YourUtilities.h"
+
 #include <iostream>
 #include <algorithm>
 #include <glm/gtc/matrix_inverse.hpp>
@@ -105,6 +109,13 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
 
     exercise = rasterizerWorld -> exercise;
 
+    std::vector<Plane> viewingPlanes = YourUtilities::getViewPlanes(
+        DefaultParams::HORIZONTAL_FOV,
+        DefaultParams::ASPECT_RATIO, 
+        DefaultParams::PROJ_NEAR_PLANE, 
+        DefaultParams::PROJ_FAR_PLANE
+    );
+
     // homogenic vector of light position for transformations
     glm::vec4 homoLightPos(rasterizerWorld -> lightPositionWorldCoordinates, 1.0f);
 
@@ -121,36 +132,50 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
             vertexProcessing(plotPixel, vertexData);
         }
 
-        // Define the Near Plane in Eye Coordinates (Camera looks to negative Z)
-        glm::vec3 nearPlanePoint(0.0f, 0.0f, -0.1f); // Placed slightly in front of the camera
-        glm::vec3 nearPlaneNormal(0.0f, 0.0f, -1.0f);
-
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
 
-            // Assemble the initial triangle
-            std::array<VertexData, 3> triangle = {
+            // Assemble the initial triangle into a list of "surviving" triangles
+            std::vector<std::array<VertexData, 3>> survivingTriangles;
+
+            survivingTriangles.push_back({
                 verticesData[face.indices[0]],
                 verticesData[face.indices[1]],
                 verticesData[face.indices[2]]
-            };
+            });
 
-            // Clip the triangle against the Near Plane
-            std::vector<std::array<VertexData, 3>> clippedTriangles = clipTriangleAgainstPlane(nearPlanePoint, nearPlaneNormal, triangle);
+            // Pass the triangles through all 6 clipping planes
+            for (const Plane& plane : viewingPlanes) {
+                
+                std::vector<std::array<VertexData, 3>> nextTriangles;
+                
+                for (auto& triangle : survivingTriangles) {
+                    auto clipped = clipTriangleAgainstPlane(plane.pointOnPlane, plane.normal, triangle);
+                    nextTriangles.insert(nextTriangles.end(), clipped.begin(), clipped.end());
+                }
+                
+                survivingTriangles = nextTriangles;
+                
+                // If triangle is entirely outside the viewing volume, stop checking planes
+                if (survivingTriangles.empty()) {
+                    break;
+                }
+            }
 
             // Finish processing and rasterize all surviving triangles
-            for (auto& clippedTri : clippedTriangles) {
+            for (auto& clippedTriangle : survivingTriangles) {
                 
-                finalizeVertex(plotPixel, clippedTri[0]);
-                finalizeVertex(plotPixel, clippedTri[1]);
-                finalizeVertex(plotPixel, clippedTri[2]);
+                finalizeVertex(plotPixel, clippedTriangle[0]);
+                finalizeVertex(plotPixel, clippedTriangle[1]);
+                finalizeVertex(plotPixel, clippedTriangle[2]);
 
                 rasterization(plotPixel, 
-                              clippedTri[0],
-                              clippedTri[1],
-                              clippedTri[2],
+                              clippedTriangle[0],
+                              clippedTriangle[1],
+                              clippedTriangle[2],
                               face.color);
             }
+
         }
     }
 }
@@ -534,76 +559,48 @@ std::vector<std::array<VertexData, 3>> ObjectModel::clipTriangleAgainstPlane(glm
         return glm::dot(planeNormal, vertexPosition - planePoint);
     };
 
-    // Categorize vertices into "inside" (visible) and "outside" (invisible) lists
-    std::vector<VertexData> insideVertices;
-    std::vector<VertexData> outsideVertices;
+    // List to store the vertices of the clipped polygon
+    std::vector<VertexData> outputPolygon;
+    outputPolygon.reserve(4);
 
+    // Walk through the edges of the triangle sequentially
     for (int i = 0; i < 3; i++) {
-        float distance = calculateDistanceToPlane(inputTriangle[i].pointEyeCoordinates);
-        if (distance >= 0.0f) {
-            insideVertices.push_back(inputTriangle[i]);
-        } else {
-            outsideVertices.push_back(inputTriangle[i]);
+        int prevIndex = (i == 0) ? 2 : i - 1;
+        VertexData currentVertex = inputTriangle[i];
+        VertexData prevVertex = inputTriangle[prevIndex];
+
+        float distCurrent = calculateDistanceToPlane(currentVertex.pointEyeCoordinates);
+        float distPrev = calculateDistanceToPlane(prevVertex.pointEyeCoordinates);
+
+        // If the current vertex is inside the viewing volume
+        if (distCurrent >= 0.0f) {
+
+            // If the previous vertex was outside, we crossed the plane going in - add the intersection point
+            if (distPrev < 0.0f) {
+                float t = distPrev / (distPrev - distCurrent);
+                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+            }
+            // Add the valid current vertex
+            outputPolygon.push_back(currentVertex);
+        }
+        // If the current vertex is outside the viewing volume
+        else {
+            // If the previous vertex was inside, we crossed the plane going out - add the intersection point
+            if (distPrev >= 0.0f) {
+                float t = distPrev / (distPrev - distCurrent);
+                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+            }
         }
     }
 
-    // Triangle is entirely outside the plane -> discard it
-    if (insideVertices.empty()) {
-        return resultingTriangles; 
-    }
-
-    // Triangle is entirely inside the plane -> keep it as is
-    if (insideVertices.size() == 3) {
-        resultingTriangles.push_back(inputTriangle);
-        return resultingTriangles;
-    }
-
-    // One vertex is inside, two are outside -> clip into a single smaller triangle
-    if (insideVertices.size() == 1 && outsideVertices.size() == 2) {
-        VertexData validVertex = insideVertices[0];
-        VertexData invalidVertex1 = outsideVertices[0];
-        VertexData invalidVertex2 = outsideVertices[1];
-
-        // Get distances to calculate exactly where the edges intersect the plane
-        float validDistance = calculateDistanceToPlane(validVertex.pointEyeCoordinates);
-        float invalidDistance1 = calculateDistanceToPlane(invalidVertex1.pointEyeCoordinates);
-        float invalidDistance2 = calculateDistanceToPlane(invalidVertex2.pointEyeCoordinates);
-
-        // Calculate the interpolation weights
-        float interpolationRatio1 = validDistance / (validDistance - invalidDistance1);
-        float interpolationRatio2 = validDistance / (validDistance - invalidDistance2);
-        
-        // Generate the new vertices directly on the plane boundary
-        VertexData newVertex1 = interpolateVertex(validVertex, invalidVertex1, interpolationRatio1);
-        VertexData newVertex2 = interpolateVertex(validVertex, invalidVertex2, interpolationRatio2);
-        
-        resultingTriangles.push_back({validVertex, newVertex1, newVertex2});
-        return resultingTriangles;
-    }
-    
-    // Two vertices are inside, one is outside -> split into two triangles
-    if (insideVertices.size() == 2 && outsideVertices.size() == 1) {
-        VertexData validVertex1 = insideVertices[0];
-        VertexData validVertex2 = insideVertices[1];
-        VertexData invalidVertex = outsideVertices[0];
-
-        // Get distances
-        float validDistance1 = calculateDistanceToPlane(validVertex1.pointEyeCoordinates);
-        float validDistance2 = calculateDistanceToPlane(validVertex2.pointEyeCoordinates);
-        float invalidDistance = calculateDistanceToPlane(invalidVertex.pointEyeCoordinates);
-
-        // Calculate the interpolation ratios
-        float interpolationRatio1 = validDistance1 / (validDistance1 - invalidDistance);
-        float interpolationRatio2 = validDistance2 / (validDistance2 - invalidDistance);
-        
-        // Generate the new vertices directly on the plane boundary
-        VertexData newVertex1 = interpolateVertex(validVertex1, invalidVertex, interpolationRatio1);
-        VertexData newVertex2 = interpolateVertex(validVertex2, invalidVertex, interpolationRatio2);
-        
-        // Break the resulting quadrilateral into two valid triangles[cite: 28]
-        resultingTriangles.push_back({validVertex1, validVertex2, newVertex1});
-        resultingTriangles.push_back({validVertex2, newVertex2, newVertex1});
-        return resultingTriangles;
+    // break the resulting polygon back down into valid triangles
+   if (outputPolygon.size() == 3) {
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
+    } 
+    else if (outputPolygon.size() == 4) {
+        // split it into 2 triangles
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
+        resultingTriangles.push_back({outputPolygon[0], outputPolygon[2], outputPolygon[3]});
     }
 
     return resultingTriangles;
