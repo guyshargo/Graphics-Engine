@@ -70,12 +70,15 @@ private:
 
     // Helper methods
     void vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex);
-    void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor);
+    void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor, const glm::vec3& faceNormal);
     void finalizeVertex(const PlotPixelCallback& plotPixel, VertexData& vertex);
 
     static VertexData interpolateVertex(const VertexData& v1, const VertexData& v2, float interpolationWeight);
-    static std::vector<std::array<VertexData, 3>> clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, std::array<VertexData, 3>& inputTriangle);
 
+    int clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, 
+                             const std::array<VertexData, 3>& inputTriangle, 
+                             std::array<std::array<VertexData, 3>, 2>& outTriangles);
+                             
     glm::vec3 fragmentProcessing(const FragmentData& fragmentData);
     static void drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);

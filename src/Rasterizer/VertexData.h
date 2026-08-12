@@ -22,7 +22,9 @@ struct VertexData {
     glm::vec3 normalEyeCoordinates; // Normal vector at the vertex in eye coordinates
     float lightingIntensity0to1;
 
-    // Constructor
+    // Constructors
+    VertexData() = default;
+    
     VertexData(const glm::vec3& pointObj, const glm::vec3& normalObj, const glm::vec2& texCoord, const glm::vec3& col)
         : pointObjectCoordinates(pointObj), 
           normalObjectCoordinates(normalObj), 

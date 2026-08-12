@@ -5,6 +5,7 @@
 #include "PlaneData.h"
 #include "DefaultParams.h"
 #include "YourUtilities.h"
+#include "VertexData.h"
 
 #include <iostream>
 #include <algorithm>
@@ -132,12 +133,29 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
             vertexProcessing(plotPixel, vertexData);
         }
 
+        std::vector<std::array<VertexData, 3>> survivingTriangles;
+        std::vector<std::array<VertexData, 3>> nextTriangles;
+
+        // safe maximum for a single triangle cut by 6 planes
+        survivingTriangles.reserve(64); 
+        nextTriangles.reserve(64);
+
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
 
-            // Assemble the initial triangle into a list of "surviving" triangles
-            std::vector<std::array<VertexData, 3>> survivingTriangles;
+            // 1. Perform Early Back-Face Culling in Eye Coordinates
+            glm::vec3 p1 = verticesData[face.indices[0]].pointEyeCoordinates;
+            glm::vec3 p2 = verticesData[face.indices[1]].pointEyeCoordinates;
+            glm::vec3 p3 = verticesData[face.indices[2]].pointEyeCoordinates;
+            
+            glm::vec3 faceNormal = glm::cross(p2 - p1, p3 - p1);
+            
+            if (faceNormal.z <= 0.0f) {
+                continue; // Skip clipping and rasterization entirely for invisible faces
+            }
 
+            survivingTriangles.clear();
+            
             survivingTriangles.push_back({
                 verticesData[face.indices[0]],
                 verticesData[face.indices[1]],
@@ -146,12 +164,17 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
 
             // Pass the triangles through all 6 clipping planes
             for (const Plane& plane : viewingPlanes) {
-                
-                std::vector<std::array<VertexData, 3>> nextTriangles;
-                
-                for (auto& triangle : survivingTriangles) {
-                    auto clipped = clipTriangleAgainstPlane(plane.pointOnPlane, plane.normal, triangle);
-                    nextTriangles.insert(nextTriangles.end(), clipped.begin(), clipped.end());
+
+                nextTriangles.clear();
+                                
+                for (const auto& triangle : survivingTriangles) {
+                    // Buffer to hold up to 2 triangles returned by the clipping function
+                    std::array<std::array<VertexData, 3>, 2> clippedTriangles;
+                    int numClipped = clipTriangleAgainstPlane(plane.pointOnPlane, plane.normal, triangle, clippedTriangles);
+                    
+                    for (int i = 0; i < numClipped; ++i) {
+                        nextTriangles.push_back(clippedTriangles[i]);
+                    }
                 }
                 
                 survivingTriangles = nextTriangles;
@@ -173,7 +196,8 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
                               clippedTriangle[0],
                               clippedTriangle[1],
                               clippedTriangle[2],
-                              face.color);
+                              face.color,
+                              faceNormal);
             }
 
         }
@@ -309,11 +333,7 @@ void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const gl
 }
 
 void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
-                                const VertexData& vertex3, const glm::vec3& faceColor) {
-    
-    // normal for entire polygon face for 'flat shading'
-    glm::vec3 faceNormal = glm::normalize(glm::cross(vertex2.pointEyeCoordinates - vertex1.pointEyeCoordinates, 
-                                                    vertex3.pointEyeCoordinates - vertex1.pointEyeCoordinates));
+                                const VertexData& vertex3, const glm::vec3& faceColor, const glm::vec3& faceNormal) {
 
     // Back-face culling so triangle faces which are faced backwards will be skipped
     if (faceNormal.z <= 0.0f) {
@@ -491,9 +511,30 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
         glm::vec2 textureImgCoordinates((textureCoordinates.x * (textureGetWidth() -1)), 
                                          (textureCoordinates.y * (textureGetHeight() -1)));
 
-        // round result to get to Nearest pixel in texture image
-        return textureGetPixel(static_cast<int>(std::round(textureImgCoordinates.x)),
-                                static_cast<int>(std::round(textureImgCoordinates.y)));
+        // Calculate the integer coordinates of the top-left texel (x0, y0)
+        int x0 = static_cast<int>(std::floor(textureImgCoordinates.x));
+        int y0 = static_cast<int>(std::floor(textureImgCoordinates.y));
+
+        // Calculate the coordinates of the bottom-right texel (x1, y1), modulo wraps around the texture edges safely
+        int x1 = (x0 + 1) % textureGetWidth();
+        int y1 = (y0 + 1) % textureGetHeight();
+
+        // Fractional part of the coordinates used as blending weights
+        float u_ratio = textureImgCoordinates.x - x0;
+        float v_ratio = textureImgCoordinates.y - y0;
+
+        // Colors of four corners of grid
+        glm::vec3 tex00 = textureGetPixel(x0, y0); // Top-Left
+        glm::vec3 tex10 = textureGetPixel(x1, y0); // Top-Right
+        glm::vec3 tex01 = textureGetPixel(x0, y1); // Bottom-Left
+        glm::vec3 tex11 = textureGetPixel(x1, y1); // Bottom-Right
+
+        // Bilinear Interpolation
+        glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
+        glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
+        glm::vec3 finalTexColor = glm::mix(colorTop, colorBottom, v_ratio);
+
+        return finalTexColor;
 
     } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
 
@@ -510,11 +551,30 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
         glm::vec2 textureImgCoordinates((textureCoordinates.x * (textureGetWidth() -1)), 
                                          (textureCoordinates.y * (textureGetHeight() -1)));
 
-        // round result to get to Nearest pixel in texture image
-        glm::vec3 textureColor = textureGetPixel(static_cast<int>(std::round(textureImgCoordinates.x)),
-                                static_cast<int>(std::round(textureImgCoordinates.y)));
+        // Calculate the integer coordinates of the top-left texel (x0, y0)
+        int x0 = static_cast<int>(std::floor(textureImgCoordinates.x));
+        int y0 = static_cast<int>(std::floor(textureImgCoordinates.y));
+
+        // Calculate the coordinates of the bottom-right texel (x1, y1), modulo wraps around the texture edges safely
+        int x1 = (x0 + 1) % textureGetWidth();
+        int y1 = (y0 + 1) % textureGetHeight();
+
+        // Fractional part of the coordinates used as blending weights
+        float u_ratio = textureImgCoordinates.x - x0;
+        float v_ratio = textureImgCoordinates.y - y0;
+
+        // Colors of four corners of grid
+        glm::vec3 tex00 = textureGetPixel(x0, y0); // Top-Left
+        glm::vec3 tex10 = textureGetPixel(x1, y0); // Top-Right
+        glm::vec3 tex01 = textureGetPixel(x0, y1); // Bottom-Left
+        glm::vec3 tex11 = textureGetPixel(x1, y1); // Bottom-Right
+
+        // Bilinear Interpolation
+        glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
+        glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
+        glm::vec3 finalTexColor = glm::mix(colorTop, colorBottom, v_ratio);
         
-        return textureColor * pixelLighting;
+        return finalTexColor * pixelLighting;
     }
 
     return glm::vec3();
@@ -549,59 +609,51 @@ VertexData ObjectModel::interpolateVertex(const VertexData& v1, const VertexData
     return interpolatedVertex;
 }
 
-std::vector<std::array<VertexData, 3>> ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, 
-                                                                std::array<VertexData, 3>& inputTriangle) {
-
-    std::vector<std::array<VertexData, 3>> resultingTriangles;
+int ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeNormal, 
+                                          const std::array<VertexData, 3>& inputTriangle,
+                                          std::array<std::array<VertexData, 3>, 2>& outTriangles) {
     
-    // Get the distance from a vertex to the plane
     auto calculateDistanceToPlane = [&](const glm::vec3& vertexPosition) {
         return glm::dot(planeNormal, vertexPosition - planePoint);
     };
 
-    // List to store the vertices of the clipped polygon
-    std::vector<VertexData> outputPolygon;
-    outputPolygon.reserve(4);
+    // Use a fixed-size stack array instead of a dynamic std::vector
+    std::array<VertexData, 4> outputPolygon;
+    int vertexCount = 0;
 
-    // Walk through the edges of the triangle sequentially
     for (int i = 0; i < 3; i++) {
         int prevIndex = (i == 0) ? 2 : i - 1;
-        VertexData currentVertex = inputTriangle[i];
-        VertexData prevVertex = inputTriangle[prevIndex];
+        const VertexData& currentVertex = inputTriangle[i];
+        const VertexData& prevVertex = inputTriangle[prevIndex];
 
         float distCurrent = calculateDistanceToPlane(currentVertex.pointEyeCoordinates);
         float distPrev = calculateDistanceToPlane(prevVertex.pointEyeCoordinates);
 
-        // If the current vertex is inside the viewing volume
         if (distCurrent >= 0.0f) {
-
-            // If the previous vertex was outside, we crossed the plane going in - add the intersection point
             if (distPrev < 0.0f) {
                 float t = distPrev / (distPrev - distCurrent);
-                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+                outputPolygon[vertexCount++] = interpolateVertex(prevVertex, currentVertex, t);
             }
-            // Add the valid current vertex
-            outputPolygon.push_back(currentVertex);
-        }
-        // If the current vertex is outside the viewing volume
+            outputPolygon[vertexCount++] = currentVertex;
+        } 
         else {
-            // If the previous vertex was inside, we crossed the plane going out - add the intersection point
             if (distPrev >= 0.0f) {
                 float t = distPrev / (distPrev - distCurrent);
-                outputPolygon.push_back(interpolateVertex(prevVertex, currentVertex, t));
+                outputPolygon[vertexCount++] = interpolateVertex(prevVertex, currentVertex, t);
             }
         }
     }
 
-    // break the resulting polygon back down into valid triangles
-   if (outputPolygon.size() == 3) {
-        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
+    // Break the resulting polygon back down into valid triangles
+    if (vertexCount == 3) {
+        outTriangles[0] = {outputPolygon[0], outputPolygon[1], outputPolygon[2]};
+        return 1; // 1 triangle generated
     } 
-    else if (outputPolygon.size() == 4) {
-        // split it into 2 triangles
-        resultingTriangles.push_back({outputPolygon[0], outputPolygon[1], outputPolygon[2]});
-        resultingTriangles.push_back({outputPolygon[0], outputPolygon[2], outputPolygon[3]});
+    else if (vertexCount == 4) {
+        outTriangles[0] = {outputPolygon[0], outputPolygon[1], outputPolygon[2]};
+        outTriangles[1] = {outputPolygon[0], outputPolygon[2], outputPolygon[3]};
+        return 2; // 2 triangles generated
     }
 
-    return resultingTriangles;
+    return 0; // Completely clipped outside the plane
 }

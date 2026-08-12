@@ -6,9 +6,9 @@ BarycentricCoordinates::BarycentricCoordinates(const glm::vec3& v1, const glm::v
     lineOppositeToV2 = lineFromTwoPoints(v1, v3);
     lineOppositeToV3 = lineFromTwoPoints(v1, v2);
 
-    d1 = semiDistanceOfPointFromLine(lineOppositeToV1, v1);
-    d2 = semiDistanceOfPointFromLine(lineOppositeToV2, v2);
-    d3 = semiDistanceOfPointFromLine(lineOppositeToV3, v3);
+    d1 = 1.0f / semiDistanceOfPointFromLine(lineOppositeToV1, v1);
+    d2 = 1.0f / semiDistanceOfPointFromLine(lineOppositeToV2, v2);
+    d3 = 1.0f / semiDistanceOfPointFromLine(lineOppositeToV3, v3);
 }
 
 // Accessors
@@ -19,9 +19,9 @@ glm::vec3 BarycentricCoordinates::getCoordinates() const { return barycentricCoo
 
 
 void BarycentricCoordinates::calcCoordinatesForPoint(float x, float y) {
-    float barycentricAlpha = semiDistanceOfPointFromLine(lineOppositeToV1, x, y) / d1;
-    float barycentricBeta = semiDistanceOfPointFromLine(lineOppositeToV2, x, y) / d2;
-    float barycentricGamma = semiDistanceOfPointFromLine(lineOppositeToV3, x, y) / d3;
+    float barycentricAlpha = semiDistanceOfPointFromLine(lineOppositeToV1, x, y) * d1;
+    float barycentricBeta = semiDistanceOfPointFromLine(lineOppositeToV2, x, y) * d2;
+    float barycentricGamma = semiDistanceOfPointFromLine(lineOppositeToV3, x, y) * d3;
 
     barycentricCoordinates = glm::vec3(barycentricAlpha, barycentricBeta, barycentricGamma);
 }
