@@ -70,7 +70,7 @@ private:
 
     // Helper methods
     void vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex);
-    void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor, const glm::vec3& faceNormal);
+    void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor);
     void finalizeVertex(const PlotPixelCallback& plotPixel, VertexData& vertex);
 
     static VertexData interpolateVertex(const VertexData& v1, const VertexData& v2, float interpolationWeight);

@@ -31,23 +31,6 @@ namespace YourUtilities {
         planes.emplace_back(glm::vec3(0.0f, 0.0f, -nearPlane), glm::vec3(0.0f, 0.0f, -1.0f));
         planes.emplace_back(glm::vec3(0.0f, 0.0f, -farPlane),  glm::vec3(0.0f, 0.0f, 1.0f));
 
-        // Calculate the dimensions of the Near Plane
-        float halfHeight = nearPlane * std::tan(glm::radians(fov) / 2.0f);
-        float halfWidth = halfHeight * aspectRatio;
-
-        // Define the exact coordinate vectors for the 4 corners of the Near Plane
-        glm::vec3 ntl(-halfWidth,  halfHeight, -nearPlane); // Near Top Left
-        glm::vec3 ntr( halfWidth,  halfHeight, -nearPlane); // Near Top Right
-        glm::vec3 nbl(-halfWidth, -halfHeight, -nearPlane); // Near Bottom Left
-        glm::vec3 nbr( halfWidth, -halfHeight, -nearPlane); // Near Bottom Right
-        glm::vec3 origin(0.0f, 0.0f, 0.0f);
-
-        // Top, Bottom, Left, Right planes
-        planes.emplace_back(origin, glm::normalize(glm::cross(ntl, ntr))); // Top
-        planes.emplace_back(origin, glm::normalize(glm::cross(nbr, nbl))); // Bottom
-        planes.emplace_back(origin, glm::normalize(glm::cross(nbl, ntl))); // Left
-        planes.emplace_back(origin, glm::normalize(glm::cross(ntr, nbr))); // Right
-
         return planes;
     }
 

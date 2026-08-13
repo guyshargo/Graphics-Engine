@@ -143,17 +143,6 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
         // going through all faces to paint pixels in them on screen
         for (const TriangleFace& face : faces) {
 
-            // 1. Perform Early Back-Face Culling in Eye Coordinates
-            glm::vec3 p1 = verticesData[face.indices[0]].pointEyeCoordinates;
-            glm::vec3 p2 = verticesData[face.indices[1]].pointEyeCoordinates;
-            glm::vec3 p3 = verticesData[face.indices[2]].pointEyeCoordinates;
-            
-            glm::vec3 faceNormal = glm::cross(p2 - p1, p3 - p1);
-            
-            if (faceNormal.z <= 0.0f) {
-                continue; // Skip clipping and rasterization entirely for invisible faces
-            }
-
             survivingTriangles.clear();
             
             survivingTriangles.push_back({
@@ -162,7 +151,7 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
                 verticesData[face.indices[2]]
             });
 
-            // Pass the triangles through all 6 clipping planes
+            // Pass the triangles through Near\Far clipping planes
             for (const Plane& plane : viewingPlanes) {
 
                 nextTriangles.clear();
@@ -196,8 +185,7 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
                               clippedTriangle[0],
                               clippedTriangle[1],
                               clippedTriangle[2],
-                              face.color,
-                              faceNormal);
+                              face.color);
             }
 
         }
@@ -333,11 +321,23 @@ void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const gl
 }
 
 void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
-                                const VertexData& vertex3, const glm::vec3& faceColor, const glm::vec3& faceNormal) {
+                                const VertexData& vertex3, const glm::vec3& faceColor) {
 
-    // Back-face culling so triangle faces which are faced backwards will be skipped
-    if (faceNormal.z <= 0.0f) {
-        return;
+    // normal for entire polygon face for Culling and 'flat shading'
+    glm::vec3 faceNormal = glm::normalize(glm::cross(vertex2.pointEyeCoordinates - vertex1.pointEyeCoordinates, 
+                                                    vertex3.pointEyeCoordinates - vertex1.pointEyeCoordinates));
+    
+    // Back-Face Culling for both camera types
+    if (rasterizerWorld->projectionType == ProjectionTypeEnum::PERSPECTIVE) {
+        // In perspective, check if the face points in the same direction as the camera ray
+        if (glm::dot(faceNormal, vertex1.pointEyeCoordinates) >= 0.0f) {
+            return; 
+        }
+    } else {
+        // In orthographic, rays are perfectly parallel down the -Z axis
+        if (faceNormal.z <= 0.0f) {
+            return;
+        }
     }
     
     // lines rasterization: draw white lines between polygon vertices
