@@ -219,6 +219,7 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
 
         ImGui::Separator();
         ImGui::Text("Projection:");
+        ImGui::SameLine();
         if (ImGui::RadioButton("Orthographic", (int*)&rasterizerWorld.projectionType, (int)ProjectionTypeEnum::ORTHOGRAPHIC)) { 
             params.setProjectionType(ProjectionTypeEnum::ORTHOGRAPHIC);
             updateWindowFlag = true; 
@@ -237,6 +238,13 @@ void renderUserInterface(EngineMode& currentMode, SavedParams& params, RayTracer
         
         ImGui::Separator();
         ImGui::Text("Object Transformations:");
+        ImGui::SameLine();
+        if (ImGui::Button("Reset Defaults")) {
+            rasterizerWorld.objectPosition = glm::vec3(0.0f);
+            rasterizerWorld.objectRotation = glm::vec3(0.0f);
+            rasterizerWorld.objectScale = glm::vec3(DefaultParams::MODEL_SCALE);
+            updateWindowFlag = true;
+        }
         if (ImGui::DragFloat3("Position", &rasterizerWorld.objectPosition.x, 0.1f)) { updateWindowFlag = true; }
         if (ImGui::DragFloat3("Rotation", &rasterizerWorld.objectRotation.x, 1.0f)) { updateWindowFlag = true; }
         if (ImGui::DragFloat3("Scale", &rasterizerWorld.objectScale.x, 0.05f)) { updateWindowFlag = true; }

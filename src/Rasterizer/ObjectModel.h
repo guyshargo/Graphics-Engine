@@ -68,6 +68,15 @@ private:
     glm::vec3 boundingBoxCenter;
     glm::vec3 lightPositionEyeCoordinates;
 
+    struct MipLevel {
+        int width;
+        int height;
+        std::vector<glm::vec3> texData;
+    };
+
+    std::vector<MipLevel> mipmaps;
+    glm::vec3 sampleBilinear(int mipmapLevel, const glm::vec2& texCoordinates);
+
     // Helper methods
     void vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex);
     void rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, const VertexData& vertex3, const glm::vec3& faceColor);
@@ -80,6 +89,6 @@ private:
                              std::array<std::array<VertexData, 3>, 2>& outTriangles);
                              
     glm::vec3 fragmentProcessing(const FragmentData& fragmentData);
-    static void drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
+    void drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);
 };

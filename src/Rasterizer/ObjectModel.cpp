@@ -55,42 +55,63 @@ bool ObjectModel::load(const std::string& fileName) {
         size_t lastDot = fileName.find_last_of('.');
         if (lastDot != std::string::npos) {
             std::string texPath = fileName.substr(0, lastDot) + ".bmp";
-            SDL_Surface* surf = SDL_LoadBMP(texPath.c_str());
+            SDL_Surface* loadedTextureSurface = SDL_LoadBMP(texPath.c_str());
             
-            if (surf) {
-                SDL_Surface* formatted = SDL_ConvertSurfaceFormat(surf, SDL_PIXELFORMAT_ARGB8888, 0);
-                SDL_FreeSurface(surf);
+            if (loadedTextureSurface) {
+                SDL_Surface* convertedTextureSurface = SDL_ConvertSurfaceFormat(
+                    loadedTextureSurface,
+                    SDL_PIXELFORMAT_ARGB8888,
+                    0
+                );
+                SDL_FreeSurface(loadedTextureSurface);
                 
-                if (formatted) {
-                    textureWidth = formatted->w;
-                    textureHeight = formatted->h;
-                    textureData.resize(textureWidth * textureHeight);
-                    
-                    uint32_t* pixels = static_cast<uint32_t*>(formatted->pixels);
-                    int pitch = formatted->pitch / 4;
-                    
-                    for (int y = 0; y < textureHeight; ++y) {
-                        for (int x = 0; x < textureWidth; ++x) {
+                if (convertedTextureSurface) {
+                    MipLevel baseLevel;
+                    baseLevel.width = convertedTextureSurface->w;
+                    baseLevel.height = convertedTextureSurface->h;
+                    baseLevel.texData.resize(baseLevel.width * baseLevel.height);
+
+                    uint32_t* pixels = static_cast<uint32_t*>(convertedTextureSurface->pixels);
+                    int pitch = convertedTextureSurface->pitch / 4;
+
+                    for (int y=0; y < baseLevel.height; y++) {
+                        for (int x=0; x < baseLevel.width; x++) {
                             uint32_t argb = pixels[y * pitch + x];
                             float r = static_cast<float>((argb >> 16) & 0xFF) / 255.0f;
                             float g = static_cast<float>((argb >> 8) & 0xFF) / 255.0f;
                             float b = static_cast<float>(argb & 0xFF) / 255.0f;
-                            textureData[y * textureWidth + x] = glm::vec3(r, g, b);
+                            
+                            int wrapY = baseLevel.height - 1 - y;
+                            baseLevel.texData[wrapY * baseLevel.width + x] = glm::vec3(r, g, b);
                         }
                     }
-                    SDL_FreeSurface(formatted);
+                    SDL_FreeSurface(convertedTextureSurface);
+                    mipmaps.push_back(baseLevel);
+
+                    while (mipmaps.back().width > 1 || mipmaps.back().height > 1) {
+                        const MipLevel& prev = mipmaps.back();
+                        MipLevel next;
+                        next.width = std::max(1, prev.width / 2);
+                        next.height = std::max(1, prev.height / 2);
+                        next.texData.resize(next.width * next.height);
+
+                        for (int y = 0; y < next.height; ++y) {
+                            for (int x = 0; x < next.width; ++x) {
+                                int px = x * 2;
+                                int py = y * 2;
+                                
+                                glm::vec3 c00 = prev.texData[py * prev.width + px];
+                                glm::vec3 c10 = prev.texData[py * prev.width + std::min(px + 1, prev.width - 1)];
+                                glm::vec3 c01 = prev.texData[std::min(py + 1, prev.height - 1) * prev.width + px];
+                                glm::vec3 c11 = prev.texData[std::min(py + 1, prev.height - 1) * prev.width + std::min(px + 1, prev.width - 1)];
+                                
+                                next.texData[y * next.width + x] = (c00 + c10 + c01 + c11) * 0.25f;
+                            }
+                        }
+                        mipmaps.push_back(next);
+                    }
                     
-                    // Bind callbacks to this ObjectModel's own memory
-                    setTextureCallbacks(
-                        [this](int x, int y) {
-                            int wrapX = ((x % textureWidth) + textureWidth) % textureWidth;
-                            int wrapY = ((y % textureHeight) + textureHeight) % textureHeight;
-                            wrapY = textureHeight - 1 - wrapY;
-                            return textureData[wrapY * textureWidth + wrapX];
-                        },
-                        [this]() { return textureWidth; },
-                        [this]() { return textureHeight; }
-                    );
+                    hasTexture = true;
                 }
             }
         }
@@ -186,11 +207,44 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
                               clippedTriangle[1],
                               clippedTriangle[2],
                               face.color);
+                }
             }
 
+            // Draw normals AFTER all faces are fully rasterized into the Z-buffer
+        if (rasterizerWorld->displayNormals) {
+            for (VertexData& vertexData : verticesData) {
+                
+                // 1. Manually project the base vertex to window coordinates
+                glm::vec4 homoPoint(vertexData.pointEyeCoordinates, 1.0f);
+                homoPoint = projectionM * homoPoint;
+                if (homoPoint.w != 0.0f) homoPoint /= homoPoint.w;
+                homoPoint = viewportM * homoPoint;
+                glm::vec3 winCoords(homoPoint);
+
+                int x = static_cast<int>(std::round(winCoords.x));
+                int y = static_cast<int>(std::round(winCoords.y));
+
+                // 2. Check if the vertex is inside the screen bounds
+                if (x >= 0 && x < imageWidth && y >= 0 && y < imageHeight) {
+                    int zIndex = y * imageWidth + x;
+                    
+                    // 3. ONLY draw the normal if the base vertex is visible in the Z-buffer
+                    if (winCoords.z <= rasterizerWorld->zBuffer[zIndex] + 0.001f) {
+                        
+                        // Calculate the tip of the normal line
+                        glm::vec4 t2(vertexData.pointEyeCoordinates + vertexData.normalEyeCoordinates * 0.1f, 1.0f);
+                        t2 = projectionM * t2;
+                        if (t2.w != 0.0f) t2 /= t2.w;
+                        t2 = viewportM * t2;
+                        
+                        // Use YOUR original, untouched Bresenham algorithm
+                        drawLineBresenham(plotPixel, winCoords, glm::vec3(t2), 0.0f, 0.0f, 1.0f);
+                    }
+                }
+            }
         }
     }
-}
+}   
 
 void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex) {
 
@@ -237,30 +291,17 @@ void ObjectModel::finalizeVertex(const PlotPixelCallback& plotPixel, VertexData&
     // viewport transform to pixels: window coordinates
     homoPointObj = viewportM * homoPointObj;
     vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
-
-    // draw normals
-    if (rasterizerWorld -> displayNormals) {
-        glm::vec4 t2(vertex.pointEyeCoordinates + vertex.normalEyeCoordinates * 0.1f, 1);
-        
-        t2 = projectionM * t2;
-        if (t2.w != 0) {
-            t2 /= t2.w;
-        } else {
-            std::cerr << "Division by w == 0 in normal transformation" << std::endl;
-        }
-
-        t2 = viewportM * t2;
-        glm::vec3 point_plusNormal_screen(t2);
-        drawLineBresenham(plotPixel, vertex.pointWindowCoordinates, point_plusNormal_screen, 0, 0, 1.0f);
-    }
 }
 
 void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
 
     int x1 = static_cast<int>(std::round(p1.x));
-    int x2 = static_cast<int>(std::round(p2.x));
     int y1 = static_cast<int>(std::round(p1.y));
+    float z1 = p1.z;
+
+    int x2 = static_cast<int>(std::round(p2.x));
     int y2 = static_cast<int>(std::round(p2.y));
+    float z2 = p2.z;
 
     int dx = x2 - x1;
     int dy = y2 - y1;
@@ -348,16 +389,42 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
     
     // Polygon faces
     } else {
-        glm::ivec4 boundingBox = calcBoundingBox(vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 
-                                                 vertex3.pointWindowCoordinates, imageWidth, imageHeight);
+        glm::ivec4 boundingBox = calcBoundingBox(vertex1.pointWindowCoordinates, 
+                                                 vertex2.pointWindowCoordinates, 
+                                                 vertex3.pointWindowCoordinates, 
+                                                 imageWidth, 
+                                                 imageHeight);
     
-        BarycentricCoordinates bc(vertex1.pointWindowCoordinates, 
-					vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates);
+        BarycentricCoordinates bc(vertex1.pointWindowCoordinates,
+					              vertex2.pointWindowCoordinates, 
+                                  vertex3.pointWindowCoordinates);
+
+        // Calculate UVs at the start of the bounding box
+        bc.calcCoordinatesForPoint(boundingBox.x, boundingBox.z);
+        glm::vec2 tex00 = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
+
+        // Calculate UVs 1 pixel to the right
+        bc.calcCoordinatesForPoint(boundingBox.x + 1, boundingBox.z);
+        glm::vec2 tex10 = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
+
+        // Calculate UVs 1 pixel down
+        bc.calcCoordinatesForPoint(boundingBox.x, boundingBox.z + 1);
+        glm::vec2 tex01 = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
+
+        glm::vec2 dTex_dx = tex10 - tex00;
+        glm::vec2 dTex_dy = tex01 - tex00;
+
+        float texelsX = glm::length(dTex_dx * glm::vec2(mipmaps[0].width, mipmaps[0].height));
+        float texelsY = glm::length(dTex_dy * glm::vec2(mipmaps[0].width, mipmaps[0].height));
+
+        float faceLevelOfDetail = std::log2(std::max(std::max(texelsX, texelsY), 1.0f));
 
         // for flat shading
         float polygonLighting = Utilities::lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
-                                                 rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular,
-                                                 rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
+                                                            rasterizerWorld -> lighting_Diffuse, 
+                                                            rasterizerWorld -> lighting_Specular,
+                                                            rasterizerWorld -> lighting_Ambient, 
+                                                            rasterizerWorld -> lighting_sHininess);
 
         // going over every pixel in bounding box
         for (int x = boundingBox.x; x <= boundingBox.y; x++) {
@@ -381,6 +448,7 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
                         
                         // create fragment data object
                         FragmentData fragmentData;
+                        fragmentData.levelOfDetail = faceLevelOfDetail;
 
                         if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_COLOR) {
                             // color all pixels in face color
@@ -504,77 +572,31 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 
         return glm::vec3(pixelLighting);
 
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE) {
-        glm::vec2 textureCoordinates(fragmentData.textureCoordinates);
+    } else if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE || 
+               rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
 
-        // multiply with width and height to get actual coordinates from texture image
-        glm::vec2 textureImgCoordinates((textureCoordinates.x * (textureGetWidth() -1)), 
-                                         (textureCoordinates.y * (textureGetHeight() -1)));
+        if (!hasTexture || mipmaps.empty()) {
+            return glm::vec3(1.0f, 0.0f, 1.0f);
+        }
 
-        // Calculate the integer coordinates of the top-left texel (x0, y0)
-        int x0 = static_cast<int>(std::floor(textureImgCoordinates.x));
-        int y0 = static_cast<int>(std::floor(textureImgCoordinates.y));
+        int level1 = static_cast<int>(std::floor(fragmentData.levelOfDetail));
+        int level2 = std::min(level1 + 1, static_cast<int>(mipmaps.size() - 1));
+        float fractionalLOD = fragmentData.levelOfDetail - level1;
 
-        // Calculate the coordinates of the bottom-right texel (x1, y1), modulo wraps around the texture edges safely
-        int x1 = (x0 + 1) % textureGetWidth();
-        int y1 = (y0 + 1) % textureGetHeight();
+        glm::vec3 color1 = sampleBilinear(level1, fragmentData.textureCoordinates);
+        glm::vec3 color2 = sampleBilinear(level2, fragmentData.textureCoordinates);
 
-        // Fractional part of the coordinates used as blending weights
-        float u_ratio = textureImgCoordinates.x - x0;
-        float v_ratio = textureImgCoordinates.y - y0;
+        glm::vec3 finalTexColor = glm::mix(color1, color2, fractionalLOD);
 
-        // Colors of four corners of grid
-        glm::vec3 tex00 = textureGetPixel(x0, y0); // Top-Left
-        glm::vec3 tex10 = textureGetPixel(x1, y0); // Top-Right
-        glm::vec3 tex01 = textureGetPixel(x0, y1); // Bottom-Left
-        glm::vec3 tex11 = textureGetPixel(x1, y1); // Bottom-Right
-
-        // Bilinear Interpolation
-        glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
-        glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
-        glm::vec3 finalTexColor = glm::mix(colorTop, colorBottom, v_ratio);
+        if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+            float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
+                                                    lightPositionEyeCoordinates,
+                                                    rasterizerWorld->lighting_Diffuse, rasterizerWorld->lighting_Specular,
+                                                    rasterizerWorld->lighting_Ambient, rasterizerWorld->lighting_sHininess);
+            return finalTexColor * pixelLighting;
+        }
 
         return finalTexColor;
-
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
-
-        float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
-                                                lightPositionEyeCoordinates,
-                                                rasterizerWorld -> lighting_Diffuse,
-                                                rasterizerWorld -> lighting_Specular,
-                                                rasterizerWorld -> lighting_Ambient,
-                                                rasterizerWorld -> lighting_sHininess);
-
-        glm::vec2 textureCoordinates(fragmentData.textureCoordinates);
-
-        // multiply with width and height to get actual coordinates from texture image
-        glm::vec2 textureImgCoordinates((textureCoordinates.x * (textureGetWidth() -1)), 
-                                         (textureCoordinates.y * (textureGetHeight() -1)));
-
-        // Calculate the integer coordinates of the top-left texel (x0, y0)
-        int x0 = static_cast<int>(std::floor(textureImgCoordinates.x));
-        int y0 = static_cast<int>(std::floor(textureImgCoordinates.y));
-
-        // Calculate the coordinates of the bottom-right texel (x1, y1), modulo wraps around the texture edges safely
-        int x1 = (x0 + 1) % textureGetWidth();
-        int y1 = (y0 + 1) % textureGetHeight();
-
-        // Fractional part of the coordinates used as blending weights
-        float u_ratio = textureImgCoordinates.x - x0;
-        float v_ratio = textureImgCoordinates.y - y0;
-
-        // Colors of four corners of grid
-        glm::vec3 tex00 = textureGetPixel(x0, y0); // Top-Left
-        glm::vec3 tex10 = textureGetPixel(x1, y0); // Top-Right
-        glm::vec3 tex01 = textureGetPixel(x0, y1); // Bottom-Left
-        glm::vec3 tex11 = textureGetPixel(x1, y1); // Bottom-Right
-
-        // Bilinear Interpolation
-        glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
-        glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
-        glm::vec3 finalTexColor = glm::mix(colorTop, colorBottom, v_ratio);
-        
-        return finalTexColor * pixelLighting;
     }
 
     return glm::vec3();
@@ -656,4 +678,30 @@ int ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeN
     }
 
     return 0; // Completely clipped outside the plane
+}
+
+glm::vec3 ObjectModel::sampleBilinear(int mipmapLevel, const glm::vec2& texCoordinates) {
+    if (mipmapLevel >= mipmaps.size()) {
+        mipmapLevel = static_cast<int>(mipmaps.size()) - 1;
+    }
+    const MipLevel& mip = mipmaps[mipmapLevel];
+    
+    glm::vec2 texImgCoords(texCoordinates.x * (mip.width - 1), texCoordinates.y * (mip.height - 1));
+
+    int x0 = static_cast<int>(std::floor(texImgCoords.x));
+    int y0 = static_cast<int>(std::floor(texImgCoords.y));
+    int x1 = (x0 + 1) % mip.width;
+    int y1 = (y0 + 1) % mip.height;
+
+    float u_ratio = texImgCoords.x - x0;
+    float v_ratio = texImgCoords.y - y0;
+
+    glm::vec3 tex00 = mip.texData[y0 * mip.width + x0];
+    glm::vec3 tex10 = mip.texData[y0 * mip.width + x1];
+    glm::vec3 tex01 = mip.texData[y1 * mip.width + x0];
+    glm::vec3 tex11 = mip.texData[y1 * mip.width + x1];
+
+    glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
+    glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
+    return glm::mix(colorTop, colorBottom, v_ratio);
 }
