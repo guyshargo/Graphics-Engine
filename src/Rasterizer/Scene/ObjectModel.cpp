@@ -1,17 +1,15 @@
 #include "ObjectModel.h"
-#include "RasterizerWorld.h"
-#include "BarycentricCoordinates.h"
-#include "PlaneData.h"
 #include "LightingUtils.h"
 #include "DefaultParams.h"
-#include "YourUtilities.h"
-#include "VertexData.h"
+#include "./RasterUtils/BarycentricCoordinates.h"
+#include "./RasterUtils/TransformUtils.h"
+#include "./RasterUtils/DrawUtils.h"
+#include "./RasterizerWorld.h"
+#include "./Data/PipelineData.h"
 
 #include <iostream>
 #include <algorithm>
 #include <glm/gtc/matrix_inverse.hpp>
-
-RasterizationExerciseEnum ObjectModel::exercise;
 
 // Constructor
 ObjectModel::ObjectModel(RasterizerWorld* rasterizerWorld, int imageWidth, int imageHeight)
@@ -33,17 +31,8 @@ void ObjectModel::setViewportM(const glm::mat4& m) { viewportM = m; }
 glm::vec3 ObjectModel::getBoundingBoxDimensions() const { return boundingBoxDimensions; }
 glm::vec3 ObjectModel::getBoundingBoxCenter() const { return boundingBoxCenter; }
 
-void ObjectModel::setTextureCallbacks(TextureGetPixel getPixel, TextureGetDimension getWidth, TextureGetDimension getHeight) {
-    textureGetPixel = getPixel;
-    textureGetWidth = getWidth;
-    textureGetHeight = getHeight;
-    hasTexture = true;
-}
-
 bool ObjectModel::load(const std::string& fileName) {
-
     OBJLoader objLoader;
-
     try {
         objLoader.loadOBJ(fileName);
         verticesData = objLoader.getVertices();
@@ -51,87 +40,24 @@ bool ObjectModel::load(const std::string& fileName) {
         boundingBoxDimensions = objLoader.getBoundingBoxDimensions();
         boundingBoxCenter = objLoader.getBoundingBoxCenter();
         
-        // --- Load Companion Texture Directly into ObjectModel ---
         size_t lastDot = fileName.find_last_of('.');
         if (lastDot != std::string::npos) {
             std::string texPath = fileName.substr(0, lastDot) + ".bmp";
-            SDL_Surface* loadedTextureSurface = SDL_LoadBMP(texPath.c_str());
-            
-            if (loadedTextureSurface) {
-                SDL_Surface* convertedTextureSurface = SDL_ConvertSurfaceFormat(
-                    loadedTextureSurface,
-                    SDL_PIXELFORMAT_ARGB8888,
-                    0
-                );
-                SDL_FreeSurface(loadedTextureSurface);
-                
-                if (convertedTextureSurface) {
-                    MipLevel baseLevel;
-                    baseLevel.width = convertedTextureSurface->w;
-                    baseLevel.height = convertedTextureSurface->h;
-                    baseLevel.texData.resize(baseLevel.width * baseLevel.height);
-
-                    uint32_t* pixels = static_cast<uint32_t*>(convertedTextureSurface->pixels);
-                    int pitch = convertedTextureSurface->pitch / 4;
-
-                    for (int y=0; y < baseLevel.height; y++) {
-                        for (int x=0; x < baseLevel.width; x++) {
-                            uint32_t argb = pixels[y * pitch + x];
-                            float r = static_cast<float>((argb >> 16) & 0xFF) / 255.0f;
-                            float g = static_cast<float>((argb >> 8) & 0xFF) / 255.0f;
-                            float b = static_cast<float>(argb & 0xFF) / 255.0f;
-                            
-                            int wrapY = baseLevel.height - 1 - y;
-                            baseLevel.texData[wrapY * baseLevel.width + x] = glm::vec3(r, g, b);
-                        }
-                    }
-                    SDL_FreeSurface(convertedTextureSurface);
-                    mipmaps.push_back(baseLevel);
-
-                    while (mipmaps.back().width > 1 || mipmaps.back().height > 1) {
-                        const MipLevel& prev = mipmaps.back();
-                        MipLevel next;
-                        next.width = std::max(1, prev.width / 2);
-                        next.height = std::max(1, prev.height / 2);
-                        next.texData.resize(next.width * next.height);
-
-                        for (int y = 0; y < next.height; ++y) {
-                            for (int x = 0; x < next.width; ++x) {
-                                int px = x * 2;
-                                int py = y * 2;
-                                
-                                glm::vec3 c00 = prev.texData[py * prev.width + px];
-                                glm::vec3 c10 = prev.texData[py * prev.width + std::min(px + 1, prev.width - 1)];
-                                glm::vec3 c01 = prev.texData[std::min(py + 1, prev.height - 1) * prev.width + px];
-                                glm::vec3 c11 = prev.texData[std::min(py + 1, prev.height - 1) * prev.width + std::min(px + 1, prev.width - 1)];
-                                
-                                next.texData[y * next.width + x] = (c00 + c10 + c01 + c11) * 0.25f;
-                            }
-                        }
-                        mipmaps.push_back(next);
-                    }
-                    
-                    hasTexture = true;
-                }
-            }
+            texture = std::make_unique<Texture2D>(texPath);
         }
 
         return true;
-
     } catch (const std::exception& e) {
-        std::cerr << "Failed to load object model '" << fileName
-                  << "': " << e.what() << std::endl;
+        std::cerr << "Failed to load object model '" << fileName << "': " << e.what() << std::endl;
         return false;
     }
 }
 
-bool ObjectModel::objectHasTexture() const { return hasTexture; }
+bool ObjectModel::objectHasTexture() const { return texture != nullptr && texture->isValid(); }
 
 void ObjectModel::render(const PlotPixelCallback& plotPixel) {
 
-    exercise = rasterizerWorld -> exercise;
-
-    std::vector<Plane> viewingPlanes = YourUtilities::getViewPlanes(
+    std::vector<ClippingPlane> viewingPlanes = TransformUtils::getViewPlanes(
         DefaultParams::HORIZONTAL_FOV,
         DefaultParams::ASPECT_RATIO, 
         DefaultParams::PROJ_NEAR_PLANE, 
@@ -173,7 +99,7 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
             });
 
             // Pass the triangles through Near\Far clipping planes
-            for (const Plane& plane : viewingPlanes) {
+            for (const ClippingPlane& plane : viewingPlanes) {
 
                 nextTriangles.clear();
                                 
@@ -238,7 +164,7 @@ void ObjectModel::render(const PlotPixelCallback& plotPixel) {
                         t2 = viewportM * t2;
                         
                         // Use YOUR original, untouched Bresenham algorithm
-                        drawLineBresenham(plotPixel, winCoords, glm::vec3(t2), 0.0f, 0.0f, 1.0f);
+                        DrawUtils::drawLineBresenham(plotPixel, winCoords, glm::vec3(t2), glm::vec3(0.0f, 0.0f, 1.0f));
                     }
                 }
             }
@@ -293,74 +219,6 @@ void ObjectModel::finalizeVertex(const PlotPixelCallback& plotPixel, VertexData&
     vertex.pointWindowCoordinates = glm::vec3(homoPointObj);
 }
 
-void ObjectModel::drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b) {
-
-    int x1 = static_cast<int>(std::round(p1.x));
-    int y1 = static_cast<int>(std::round(p1.y));
-    float z1 = p1.z;
-
-    int x2 = static_cast<int>(std::round(p2.x));
-    int y2 = static_cast<int>(std::round(p2.y));
-    float z2 = p2.z;
-
-    int dx = x2 - x1;
-    int dy = y2 - y1;
-
-    // First check if switching points is needed
-    if (dy < -dx) {
-        std::swap(x1, x2);
-        std::swap(y1, y2);
-
-        dx = x2 - x1;
-        dy = y2 - y1;
-    }
-
-    if (std::abs(dy) <= std::abs(dx)) {
-        int yInceremnt = 1;
-
-        if (dy < 0) {
-            yInceremnt = -1;
-            dy = -dy;
-        }
-        int y = y1;
-        int diff = 2*dy - dx;
-
-        for (int stepX = x1; stepX <= x2; stepX++) {
-            plotPixel(stepX, y, glm::vec3(r, g, b));
-
-            if (diff < 0) {
-                diff += 2*dy;
-
-            } else {
-                y += yInceremnt;
-                diff += 2*dy - 2*dx;
-            }
-        }
-
-    } else {
-        int xInceremnt = 1;
-
-        if (dx < 0) {
-            xInceremnt = -1;
-            dx = -dx;
-        }
-
-        int x = x1;
-        int diff = 2*dx - dy;
-
-        for (int stepY = y1; stepY <= y2; stepY++) {
-            plotPixel(x, stepY, glm::vec3(r, g, b));
-
-            if (diff < 0) {
-                diff += 2*dx;
-            } else {
-                x += xInceremnt;
-                diff += 2*dx - 2*dy;
-            }
-        }
-    }   
-}
-
 void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const VertexData& vertex1, const VertexData& vertex2, 
                                 const VertexData& vertex3, const glm::vec3& faceColor) {
 
@@ -383,9 +241,9 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
     
     // lines rasterization: draw white lines between polygon vertices
     if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_EDGES) {
-        drawLineBresenham(plotPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineBresenham(plotPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
-        drawLineBresenham(plotPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, 1.0f, 1.0f, 1.0f);
+        DrawUtils::drawLineBresenham(plotPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, glm::vec3(1.0f));
+        DrawUtils::drawLineBresenham(plotPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, glm::vec3(1.0f));
+        DrawUtils::drawLineBresenham(plotPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, glm::vec3(1.0f));
     
     // Polygon faces
     } else {
@@ -411,13 +269,20 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
         bc.calcCoordinatesForPoint(boundingBox.x, boundingBox.z + 1);
         glm::vec2 tex01 = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
 
-        glm::vec2 dTex_dx = tex10 - tex00;
-        glm::vec2 dTex_dy = tex01 - tex00;
+        // Calculate how much the UV coordinates change for a pixel step on the screen
+        glm::vec2 uvChangePerPixelX = tex10 - tex00;
+        glm::vec2 uvChangePerPixelY = tex01 - tex00;
 
-        float texelsX = glm::length(dTex_dx * glm::vec2(mipmaps[0].width, mipmaps[0].height));
-        float texelsY = glm::length(dTex_dy * glm::vec2(mipmaps[0].width, mipmaps[0].height));
+        // Ratio of texture pixels crossed per screen pixel on X and Y axes
+        float texelsPerPixelX = 0.0f;
+        float texelsPerPixelY = 0.0f;
 
-        float faceLevelOfDetail = std::log2(std::max(std::max(texelsX, texelsY), 1.0f));
+        if (objectHasTexture()) {
+             texelsPerPixelX = glm::length(uvChangePerPixelX * glm::vec2(texture->getWidth(), texture->getHeight()));
+             texelsPerPixelY = glm::length(uvChangePerPixelY * glm::vec2(texture->getWidth(), texture->getHeight()));
+        }
+
+        float faceLevelOfDetail = std::log2(std::max(std::max(texelsPerPixelX, texelsPerPixelY), 1.0f));
 
         // for flat shading
         float polygonLighting = LightingUtils::lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
@@ -482,53 +347,21 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
                                                                              vertex3.normalEyeCoordinates);
                             
                             fragmentData.pointEyeCoordinates = interpolatedEyePoint;
-                            fragmentData.normalEyeCoordinates = interpolatedEyeNormal;
+                            fragmentData.normalEyeCoordinates = glm::normalize(interpolatedEyeNormal);
                         
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE) {
-
-                            if (!hasTexture) {
-                                // No texture available
-                                glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                plotPixel(x, y, magenta);
+                        } else if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE || rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+                            if (!objectHasTexture()) {
+                                plotPixel(x, y, glm::vec3(1.0f, 0.0f, 1.0f));
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
                                 continue;
                             }
                             
-                            // texture coordinates interpolation
-                            glm::vec2 interpolatedTexture = bc.interpolate(vertex1.textureCoordinates,
-                                                                            vertex2.textureCoordinates,
-                                                                            vertex3.textureCoordinates);
+                            fragmentData.textureCoordinates = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
                             
-                            fragmentData.textureCoordinates = interpolatedTexture;
-
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
-
-                            if (!hasTexture) {
-                                // No texture available
-                                glm::vec3 magenta(1.0f, 0.0f, 1.0f);
-                                plotPixel(x, y, magenta);
-                                rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
-                                continue;
+                            if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+                                fragmentData.pointEyeCoordinates = bc.interpolate(vertex1.pointEyeCoordinates, vertex2.pointEyeCoordinates, vertex3.pointEyeCoordinates);
+                                fragmentData.normalEyeCoordinates = bc.interpolate(vertex1.normalEyeCoordinates, vertex2.normalEyeCoordinates, vertex3.normalEyeCoordinates);
                             }
-
-                            // texture coordinates interpolation
-                            glm::vec2 interpolatedTexture = bc.interpolate(vertex1.textureCoordinates, 
-                                                                           vertex2.textureCoordinates,
-                                                                           vertex3.textureCoordinates);
-                            
-                            fragmentData.textureCoordinates = interpolatedTexture;
-
-                            // interpolation of phong lighting
-                            glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, 
-                                                                            vertex2.pointEyeCoordinates,
-                                                                            vertex3.pointEyeCoordinates);
-
-                            glm::vec3 interpolatedEyeNormal = bc.interpolate(vertex1.normalEyeCoordinates, 
-                                                                            vertex2.normalEyeCoordinates,
-                                                                            vertex3.normalEyeCoordinates);
-                            
-                            fragmentData.pointEyeCoordinates = interpolatedEyePoint;
-                            fragmentData.normalEyeCoordinates = interpolatedEyeNormal;
                         }
 
                         // get pixel color
@@ -575,18 +408,10 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     } else if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE || 
                rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
 
-        if (!hasTexture || mipmaps.empty()) {
-            return glm::vec3(1.0f, 0.0f, 1.0f);
-        }
+        // Fallback to magenta color if no texture detected
+        if (!objectHasTexture()) return glm::vec3(1.0f, 0.0f, 1.0f);
 
-        int level1 = static_cast<int>(std::floor(fragmentData.levelOfDetail));
-        int level2 = std::min(level1 + 1, static_cast<int>(mipmaps.size() - 1));
-        float fractionalLOD = fragmentData.levelOfDetail - level1;
-
-        glm::vec3 color1 = sampleBilinear(level1, fragmentData.textureCoordinates);
-        glm::vec3 color2 = sampleBilinear(level2, fragmentData.textureCoordinates);
-
-        glm::vec3 finalTexColor = glm::mix(color1, color2, fractionalLOD);
+        glm::vec3 finalTexColor = texture->sample(fragmentData.levelOfDetail, fragmentData.textureCoordinates);
 
         if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
             float pixelLighting = LightingUtils::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
@@ -607,11 +432,8 @@ glm::ivec4 ObjectModel::calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2
                                         int imageWidth, int imageHeight) {
 
     int minX = static_cast<int>(glm::floor(glm::max(0.0f, glm::min(p1.x, glm::min(p2.x, p3.x)))));
-
     int maxX = static_cast<int>(glm::ceil(glm::min(static_cast<float>(imageWidth - 1), glm::max(p1.x, glm::max(p2.x, p3.x)))));
-
     int minY = static_cast<int>(glm::floor(glm::max(0.0f, glm::min(p1.y, glm::min(p2.y, p3.y)))));
-
     int maxY = static_cast<int>(glm::ceil(glm::min(static_cast<float>(imageHeight - 1), glm::max(p1.y, glm::max(p2.y, p3.y)))));
 
     return glm::ivec4(minX, maxX, minY, maxY);
@@ -678,30 +500,4 @@ int ObjectModel::clipTriangleAgainstPlane(glm::vec3 planePoint, glm::vec3 planeN
     }
 
     return 0; // Completely clipped outside the plane
-}
-
-glm::vec3 ObjectModel::sampleBilinear(int mipmapLevel, const glm::vec2& texCoordinates) {
-    if (mipmapLevel >= mipmaps.size()) {
-        mipmapLevel = static_cast<int>(mipmaps.size()) - 1;
-    }
-    const MipLevel& mip = mipmaps[mipmapLevel];
-    
-    glm::vec2 texImgCoords(texCoordinates.x * (mip.width - 1), texCoordinates.y * (mip.height - 1));
-
-    int x0 = static_cast<int>(std::floor(texImgCoords.x));
-    int y0 = static_cast<int>(std::floor(texImgCoords.y));
-    int x1 = (x0 + 1) % mip.width;
-    int y1 = (y0 + 1) % mip.height;
-
-    float u_ratio = texImgCoords.x - x0;
-    float v_ratio = texImgCoords.y - y0;
-
-    glm::vec3 tex00 = mip.texData[y0 * mip.width + x0];
-    glm::vec3 tex10 = mip.texData[y0 * mip.width + x1];
-    glm::vec3 tex01 = mip.texData[y1 * mip.width + x0];
-    glm::vec3 tex11 = mip.texData[y1 * mip.width + x1];
-
-    glm::vec3 colorTop = glm::mix(tex00, tex10, u_ratio);
-    glm::vec3 colorBottom = glm::mix(tex01, tex11, u_ratio);
-    return glm::mix(colorTop, colorBottom, v_ratio);
 }

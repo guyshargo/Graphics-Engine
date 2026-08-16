@@ -1,5 +1,5 @@
 #include "RasterizerWorld.h"
-#include "YourUtilities.h" 
+#include "./RasterUtils/TransformUtils.h" 
 #include "DefaultParams.h"
 
 #include <limits>
@@ -51,7 +51,7 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
         object1 -> setProjectionM(orthoM);
     }
 
-    glm::mat4 viewportM = YourUtilities::createViewportMatrix(0.0f, 0.0f, imageWidth, imageHeight);
+    glm::mat4 viewportM = TransformUtils::createViewportMatrix(0.0f, 0.0f, imageWidth, imageHeight);
     object1 -> setViewportM(viewportM);
 
     glm::mat4 lookatM = glm::lookAt(cameraPos, cameraLookAtCenter, cameraUp);

@@ -6,13 +6,13 @@
 
 #include "RayTracerWorld.h"
 #include "./Scene/Model.h"
-#include "IntersectionResults.h"
+#include "./Data/IntersectionResults.h"
 #include "./Textures/SphereTexture.h"
-#include "YourUtilities.h"
+#include "./RayUtils/OpticsUtils.h"
 #include "./Scene/ModelSphere.h"
 #include "./Scene/ModelMaterial.h"
 #include "LightingUtils.h"
-
+#include "./Acceleration/BVH.h"
 
 RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree) : imageWidth(imageWidth), imageHeight(imageHeight) {}
     
@@ -30,7 +30,7 @@ bool RayTracerWorld::load(const std::string& filename) {
         for (const auto& sphere : model->spheres) {
             spherePointers.push_back(&sphere);
         }
-        bvhRoot = buildBVH(spherePointers, 0);
+        bvhRoot = BVH::buildBVH(spherePointers, 0);
 
         return true;
 
@@ -104,7 +104,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     }
 
     // closest intersection of ray with object
-    std::optional<IntersectionResults> intersectionResults = rayIntersectionBVH(bvhRoot.get(), incidentRayOrigin, incidentRayDirection);
+    std::optional<IntersectionResults> intersectionResults = BVH::rayIntersectionBVH(bvhRoot.get(), incidentRayOrigin, incidentRayDirection);
 
     // show skyBoxImageSphereTexture if no intersection detected
     if (intersectionResults == std::nullopt) {
@@ -189,65 +189,6 @@ glm::vec3 RayTracerWorld::calcPixelDirection(float x, float y, int imageWidth, i
     return glm::normalize(pixelDirection);
 }
 
-
-
-std::optional<IntersectionResults> RayTracerWorld::rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
-    const ModelSphere& sphere) {
-    
-    glm::vec3 sphereCenter = sphere.center;
-    float sphereRadius = sphere.radius;
-
-    // Distance from ray start to closest point in ray from sphere center (pm)
-    float tm = glm::dot(rayDirection, sphereCenter - rayStart);
-
-    // closest point in ray from sphere center
-    glm::vec3 pm = rayStart + tm * rayDirection;
-
-    // distance from center to ray
-    float pmDistance = glm::length(pm - sphereCenter);
-
-    // If sphere radius is smaller than distance to closest point from center on the ray
-    // The ray misses the sphere
-    if (pmDistance > sphereRadius) {
-        return std::nullopt;
-    }
-
-    // distance on ray from p1 to point which is closest to center
-    float dt = glm::sqrt(sphereRadius * sphereRadius - pmDistance * pmDistance);
-
-    // If the intersection points are behind the ray's starting point
-    // The ray starts after the sphere
-    if (tm < -dt) {
-        return std::nullopt;
-    }
-
-    // If the ray starts inside the sphere
-    if (tm < dt) {
-        glm::vec3 firstIntersectionPoint = pm + dt * rayDirection;
-        glm::vec3 normal = glm::normalize(sphereCenter - firstIntersectionPoint); // Normal points inside the sphere
-        return IntersectionResults{true, 
-            firstIntersectionPoint, 
-            normal,
-            false, 
-            &sphere};
-    }
-
-    // If the ray starts before the sphere
-    else {
-        glm::vec3 firstIntersectionPoint = pm - dt * rayDirection;
-        glm::vec3 normal = glm::normalize(firstIntersectionPoint - sphereCenter);
-        return IntersectionResults{true, 
-            firstIntersectionPoint, 
-            normal,
-            true, 
-            &sphere};
-    }
-
-    return std::nullopt;
-}
-
-
-
 glm::vec3 RayTracerWorld::calcKdCombinedWithTexture(glm::vec3 intersectionPoint, 
                                                 glm::vec3 intersectedSphereCenter, 
                                                 const SphereTexture& intersectedSphereTexture, 
@@ -308,7 +249,7 @@ float RayTracerWorld::isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, 
         glm::vec3 outsideOfObjectPoint = point + 0.05f * pointNormal;
 
         // check collision with other spheres along shadowRay
-        std::optional<IntersectionResults> isCollision = rayIntersectionBVH(bvhRoot.get(), outsideOfObjectPoint, shadowRayDirection);
+        std::optional<IntersectionResults> isCollision = BVH::rayIntersectionBVH(bvhRoot.get(), outsideOfObjectPoint, shadowRayDirection);
 
         if (isCollision.has_value()) {
             // Calculate distances to ensure the blocking object is actually between the surface and the light
@@ -360,7 +301,7 @@ glm::vec3 RayTracerWorld::calcTransmissionLight(glm::vec3 incidentRayDirection,
                                     int depthLevel) const {
     
     // calculate new direction of ray after bend through material
-    glm::vec3 transmittedRay = YourUtilities::calcTransmissionRay(incidentRayDirection, intersectionNormal, refractiveIndexIntersectedSphere, intersectionFromOutsideOfSphere);
+    glm::vec3 transmittedRay = OpticsUtils::calcTransmissionRay(incidentRayDirection, intersectionNormal, refractiveIndexIntersectedSphere, intersectionFromOutsideOfSphere);
     
     // if resulted vector is very small - its reflected light so we send ray to be calculated as such
     if (glm::length(transmittedRay) < 0.0001f) {
@@ -375,123 +316,6 @@ glm::vec3 RayTracerWorld::calcTransmissionLight(glm::vec3 incidentRayDirection,
 
     return rayTracing(insideOfObjectPoint, transmittedRay, model, skyBoxImageSphereTexture, depthLevel + 1);
 }
-
-
-
-BoundingSphere RayTracerWorld::computeBoundingSphere(const std::vector<const ModelSphere*>& spheres) const {
-    if (spheres.empty()) return {};
-    if (spheres.size() == 1) return {spheres[0]->center, spheres[0]->radius};
-
-    // Calculate the centroid of all spheres
-    glm::vec3 center(0.0f);
-    for (const auto* s : spheres) {
-        center += s->center;
-    }
-    center /= static_cast<float>(spheres.size());
-
-    // Find the maximum distance to any sphere's edge to determine the radius
-    float maxRadius = 0.0f;
-    for (const auto* s : spheres) {
-        float distanceToEdge = glm::length(s->center - center) + s->radius;
-        if (distanceToEdge > maxRadius) {
-            maxRadius = distanceToEdge;
-        }
-    }
-
-    return {center, maxRadius};
-}
-
-
-
-std::unique_ptr<BVHNode> RayTracerWorld::buildBVH(std::vector<const ModelSphere*> spheres, int depth) {
-    auto node = std::make_unique<BVHNode>();
-    node->bounds = computeBoundingSphere(spheres);
-
-    // Base Case: If the group is small enough, it becomes a leaf node
-    if (spheres.size() <= 2) {
-        node->leafSpheres = std::move(spheres);
-        return node;
-    }
-
-    // Recursive Step: Sort spheres along an alternating axis to partition space
-    int axis = depth % 3; // 0 = X, 1 = Y, 2 = Z
-    std::sort(spheres.begin(), spheres.end(), [axis](const ModelSphere* a, const ModelSphere* b) {
-        return a->center[axis] < b->center[axis];
-    });
-
-    // Split the spheres in half
-    auto mid = spheres.begin() + spheres.size() / 2;
-    std::vector<const ModelSphere*> leftSpheres(spheres.begin(), mid);
-    std::vector<const ModelSphere*> rightSpheres(mid, spheres.end());
-
-    // Recursively build children
-    node->left = buildBVH(leftSpheres, depth + 1);
-    node->right = buildBVH(rightSpheres, depth + 1);
-
-    return node;
-}
-
-
-
-bool RayTracerWorld::intersectBoundingSphere(const glm::vec3& rayStart, const glm::vec3& rayDirection, const BoundingSphere& bounds) const {
-    float tm = glm::dot(rayDirection, bounds.center - rayStart);
-    glm::vec3 pm = rayStart + tm * rayDirection;
-    float pmDistance = glm::length(pm - bounds.center);
-
-    if (pmDistance > bounds.radius) {
-        return false;
-    }
-
-    float dt = glm::sqrt(bounds.radius * bounds.radius - pmDistance * pmDistance);
-    if (tm < -dt) {
-        return false;
-    }
-
-    return true;
-}
-
-
-
-std::optional<IntersectionResults> RayTracerWorld::rayIntersectionBVH(const BVHNode* node, const glm::vec3& rayStart, const glm::vec3& rayDirection) const {
-    // If the ray completely misses this node's bounding sphere, skip it
-    if (!node || !intersectBoundingSphere(rayStart, rayDirection, node->bounds)) {
-        return std::nullopt;
-    }
-
-    // If it's a leaf, check the actual ModelSpheres exactly like your previous loop
-    if (node->isLeaf()) {
-        std::optional<IntersectionResults> closest = std::nullopt;
-        for (const ModelSphere* sphere : node->leafSpheres) {
-            std::optional<IntersectionResults> current = rayIntersection(rayStart, rayDirection, *sphere);
-            if (current.has_value()) {
-                if (!closest.has_value()) {
-                    closest = current;
-                } else {
-                    float currentDist = glm::length(current->intersectionPoint - rayStart);
-                    float closestDist = glm::length(closest->intersectionPoint - rayStart);
-                    if (currentDist < closestDist) {
-                        closest = current;
-                    }
-                }
-            }
-        }
-        return closest;
-    }
-
-    // If it's an internal node, recursively check both children
-    auto hitLeft = rayIntersectionBVH(node->left.get(), rayStart, rayDirection);
-    auto hitRight = rayIntersectionBVH(node->right.get(), rayStart, rayDirection);
-
-    // Return the closer of the two intersections
-    if (hitLeft && hitRight) {
-        float distLeft = glm::length(hitLeft->intersectionPoint - rayStart);
-        float distRight = glm::length(hitRight->intersectionPoint - rayStart);
-        return (distLeft < distRight) ? hitLeft : hitRight;
-    }
-
-    return hitLeft ? hitLeft : hitRight;
-}
-
 
 void RayTracerWorld::setDepthOfRayTracing(int depthOfRayTracing) {
     params.setDepthOfRayTracing(depthOfRayTracing);

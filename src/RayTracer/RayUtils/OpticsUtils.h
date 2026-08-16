@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include <cmath>
 
-namespace YourUtilities {
+namespace OpticsUtils {
 
     /**
      * Calculates the direction of a transmission ray as it passes through

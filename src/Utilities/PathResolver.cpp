@@ -9,14 +9,14 @@ namespace PathResolver {
         char* basePath = SDL_GetBasePath();
         if (basePath) {
             std::string path(basePath);
-            SDL_free(basePath); // Free the memory allocated by SDL
+            SDL_free(basePath); // Free the memory allocated by SDL to prevent leaks
             
-            // Standardize slashes for cross-platform safety
+            // Standardize slashes for cross-platform safety (Windows \ to POSIX /)
             std::replace(path.begin(), path.end(), '\\', '/');
             return path;
         }
         
-        // Fallback if SDL fails to determine the base path
+        // Fallback to the current working directory if SDL fails to determine the base path
         std::string fallback = std::filesystem::current_path().string() + "/";
         std::replace(fallback.begin(), fallback.end(), '\\', '/');
         return fallback;

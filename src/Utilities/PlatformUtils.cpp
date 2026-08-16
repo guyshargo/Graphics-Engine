@@ -13,11 +13,14 @@ namespace PlatformUtils {
         std::string filterMask = "*." + fileExtension;
         std::vector<char> filter;
         
+        // Construct the description segment
         filter.insert(filter.end(), filterDesc.begin(), filterDesc.end());
         filter.push_back('\0');
+
+        // Construct the mask segment
         filter.insert(filter.end(), filterMask.begin(), filterMask.end());
         filter.push_back('\0');
-        filter.push_back('\0'); // Final terminator
+        filter.push_back('\0'); // Final terminator for the Win32 API struct
         
         return filter;
     }
@@ -28,6 +31,7 @@ namespace PlatformUtils {
 
         std::vector<char> filter = createWin32Filter(fileExtension);
 
+        // Initialize the OPENFILENAME struct required by the Win32 dialog
         ZeroMemory(&ofn, sizeof(OPENFILENAMEA));
         ofn.lStructSize = sizeof(OPENFILENAMEA);
         ofn.hwndOwner = NULL; // No specific owner window

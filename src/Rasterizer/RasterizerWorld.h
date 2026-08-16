@@ -7,7 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "ExerciseEnum.h"
-#include "ObjectModel.h"
+#include "./Scene/ObjectModel.h"
 
 class RasterizerWorld {
 public:

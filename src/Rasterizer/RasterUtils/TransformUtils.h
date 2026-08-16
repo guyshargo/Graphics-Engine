@@ -1,12 +1,11 @@
 #pragma once
 
-#include "PlaneData.h"
-
+#include "./Data/PipelineData.h"
 #include <vector>
 #include <string>
 #include <glm/glm.hpp>
 
-namespace YourUtilities {
+namespace TransformUtils {
 
     inline static glm::mat4 createViewportMatrix(float x, float y, float width, float height) {
         glm::mat4 viewportMatrix(1.0f);
@@ -24,8 +23,8 @@ namespace YourUtilities {
         return viewportMatrix;
     }
 
-    inline static std::vector<Plane> getViewPlanes(float fov, float aspectRatio, float nearPlane, float farPlane) {
-        std::vector<Plane> planes;
+    inline static std::vector<ClippingPlane> getViewPlanes(float fov, float aspectRatio, float nearPlane, float farPlane) {
+        std::vector<ClippingPlane> planes;
 
         // Near & Far planes
         planes.emplace_back(glm::vec3(0.0f, 0.0f, -nearPlane), glm::vec3(0.0f, 0.0f, -1.0f));
@@ -33,5 +32,4 @@ namespace YourUtilities {
 
         return planes;
     }
-
 }

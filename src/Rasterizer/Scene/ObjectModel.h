@@ -4,14 +4,14 @@
 #include <string>
 #include <functional>
 #include <cmath>
+#include <memory>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "VertexData.h"
-#include "TriangleFace.h"
+#include "./Data/PipelineData.h"
 #include "ExerciseEnum.h"
-#include "FragmentData.h"
 #include "OBJLoader.h"
+#include "./Textures/Texture2D.h"
 
 class RasterizerWorld;
 
@@ -34,13 +34,8 @@ public:
     bool objectHasTexture() const;
 
     using PlotPixelCallback = std::function<void(int x, int y, const glm::vec3& color)>;
-    using TextureGetPixel = std::function<glm::vec3(int x, int y)>;
-    using TextureGetDimension = std::function<int()>;
-    
-    void setTextureCallbacks(TextureGetPixel getPixel, TextureGetDimension getWidth, TextureGetDimension getHeight);
-    void render(const PlotPixelCallback& plotPixel);
 
-    static RasterizationExerciseEnum exercise;
+    void render(const PlotPixelCallback& plotPixel);
 
 private:
     RasterizerWorld* rasterizerWorld;
@@ -50,14 +45,7 @@ private:
     std::vector<VertexData> verticesData;
     std::vector<TriangleFace> faces;
 
-    std::vector<glm::vec3> textureData;
-    int textureWidth = 0;
-    int textureHeight = 0;
-    
-    TextureGetPixel textureGetPixel;
-    TextureGetDimension textureGetWidth;
-    TextureGetDimension textureGetHeight;
-    bool hasTexture = false;
+    std::unique_ptr<Texture2D> texture;
 
     glm::mat4 modelM{1.0f};
     glm::mat4 lookatM{1.0f};
@@ -67,15 +55,6 @@ private:
     glm::vec3 boundingBoxDimensions;
     glm::vec3 boundingBoxCenter;
     glm::vec3 lightPositionEyeCoordinates;
-
-    struct MipLevel {
-        int width;
-        int height;
-        std::vector<glm::vec3> texData;
-    };
-
-    std::vector<MipLevel> mipmaps;
-    glm::vec3 sampleBilinear(int mipmapLevel, const glm::vec2& texCoordinates);
 
     // Helper methods
     void vertexProcessing(const PlotPixelCallback& plotPixel, VertexData& vertex);
@@ -89,6 +68,5 @@ private:
                              std::array<std::array<VertexData, 3>, 2>& outTriangles);
                              
     glm::vec3 fragmentProcessing(const FragmentData& fragmentData);
-    void drawLineBresenham(const PlotPixelCallback& plotPixel, const glm::vec3& p1, const glm::vec3& p2, float r, float g, float b);
     static glm::ivec4 calcBoundingBox(const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, int imageWidth, int imageHeight);
 };

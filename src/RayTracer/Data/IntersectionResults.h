@@ -17,10 +17,8 @@ struct IntersectionResults {
 
     // Constructor
     IntersectionResults(bool intersected, const glm::vec3& intersectionPoint, const glm::vec3& normal, bool rayFromOutsideOfSphere, 
-                        const ModelSphere* intersectedSphere)
-                                
-                        : 
-                                
-            intersectionPoint(intersectionPoint), normal(normal), rayFromOutsideOfSphere(rayFromOutsideOfSphere), 
-            intersectedSphere(intersectedSphere) {}
+                        const ModelSphere* intersectedSphere)                               
+                        :                            
+                        intersectionPoint(intersectionPoint), normal(normal), rayFromOutsideOfSphere(rayFromOutsideOfSphere), 
+                        intersectedSphere(intersectedSphere) {}
 };

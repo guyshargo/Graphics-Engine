@@ -1,14 +1,14 @@
 #define TINYOBJLOADER_IMPLEMENTATION 
 
 #include "OBJLoader.h"
+#include "../vendor/tiny_obj_loader.h"
+
 #include <iostream>
 #include <unordered_map>
 #include <random>
 #include <cmath>
 #include <algorithm>
 #include <glm/gtc/constants.hpp>
-
-#include "../vendor/tiny_obj_loader.h"
 
 OBJLoader::OBJLoader(bool useSphericalMapping) 
     : useSphericalMapping(useSphericalMapping),

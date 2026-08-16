@@ -5,9 +5,7 @@
 #include <limits>
 #include <glm/glm.hpp>
 #include <SDL.h>
-
-#include "VertexData.h"
-#include "TriangleFace.h"
+#include "./Data/PipelineData.h"
 
 class OBJLoader {
 public:

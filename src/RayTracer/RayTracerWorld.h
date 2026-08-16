@@ -4,37 +4,12 @@
 #include <memory>
 #include <optional>
 #include <vector>
-#include "IntersectionResults.h"
+#include "./Data/IntersectionResults.h"
 #include "SavedParams.h"
 #include "./Textures/SphereTexture.h"
+#include "./Acceleration/BVH.h"
 
 class Model;
-
-/**
- * @brief Spherical bounds used to enclose one or more model spheres in the BVH
- */
-struct BoundingSphere {
-    glm::vec3 center{0.0f, 0.0f, 0.0f};
-    float radius{0.0f};
-};
-
-/**
- * @brief Node in the bounding volume hierarchy used to accelerate ray intersections
- */
-struct BVHNode {
-    BoundingSphere bounds;
-    std::unique_ptr<BVHNode> left;
-    std::unique_ptr<BVHNode> right;
-    
-    //Model spheres stored by a leaf node. internal nodes leave this empty
-    std::vector<const ModelSphere*> leafSpheres; 
-
-    /**
-     * @brief Determines whether this node is a leaf
-     * @return true when the node has no child nodes, otherwise false
-     */
-    bool isLeaf() const { return left == nullptr && right == nullptr; }
-};
 
 class RayTracerWorld {
 
@@ -122,20 +97,6 @@ class RayTracerWorld {
          * @return A normalized glm::vec3 representing the ray's direction in 3D space
          */
         static glm::vec3 calcPixelDirection(float x, float y, int imageWidth, int imageHeight, float fovXdegree);
-
-
-        /**
-         * @brief Calculates the exact intersection point between a ray and a single mathematical sphere
-         *
-         * @param rayStart The origin point of the ray
-         * @param rayDirection The normalized direction vector of the ray
-         * @param sphere The target ModelSphere to test for intersection
-         * @return An std::optional containing IntersectionResults if a hit occurs, or std::nullopt if the ray misses completely
-         */
-        static std::optional<IntersectionResults> rayIntersection(const glm::vec3& rayStart, const glm::vec3& rayDirection, 
-                                                                    const ModelSphere& sphere);
-
-        
                                                                     
         /**
          * @brief Blends the diffuse reflection coefficient (Kd) of a material with the sampled texture color for a specific point on a sphere
@@ -234,45 +195,4 @@ class RayTracerWorld {
             glm::vec3 rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
                 const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const;
 
-
-            /**
-             * @brief Calculates a bounding sphere that fully encloses a provided collection of ModelSpheres
-             *
-             * @param spheres A vector of pointers to the ModelSphere objects to be enclosed
-             * @return A BoundingSphere struct containing the centroid and the maximum radius required to encompass all given spheres
-             */
-            BoundingSphere computeBoundingSphere(const std::vector<const ModelSphere*>& spheres) const;
-
-
-            /**
-             * @brief Recursively partitions a collection of spheres to build a Bounding Volume Hierarchy (BVH) tree, alternating the sorting axis based on depth
-             *
-             * @param spheres A vector of pointers to the ModelSpheres to be organized into the tree
-             * @param depth The current depth in the tree construction, used to determine the splitting axis (X, Y, or Z)
-             * @return A unique_ptr to the constructed BVHNode serving as the root for this subset of geometry
-             */
-            std::unique_ptr<BVHNode> buildBVH(std::vector<const ModelSphere*> spheres, int depth);
-
-
-            /**
-             * @brief Performs a fast boolean intersection test between a ray and a bounding sphere to determine if the ray traverses this spatial region
-             *
-             * @param rayStart The origin point of the ray
-             * @param rayDirection The normalized direction vector of the ray
-             * @param bounds The BoundingSphere to test against
-             * @return true if the ray intersects the bounding sphere; false if it misses completely
-             */
-            bool intersectBoundingSphere(const glm::vec3& rayStart, const glm::vec3& rayDirection, const BoundingSphere& bounds) const;
-
-
-            /**
-             * @brief Traverses the Bounding Volume Hierarchy (BVH) to find the closest intersection between a ray and the scene geometry
-             * Sub-trees are entirely skipped if their bounding sphere is not intersected by the ray
-             *
-             * @param node The current BVHNode being evaluated
-             * @param rayStart The origin point of the ray
-             * @param rayDirection The normalized direction vector of the ray
-             * @return An std::optional containing IntersectionResults for the closest hit, or std::nullopt if no geometry is intersected
-             */
-            std::optional<IntersectionResults> rayIntersectionBVH(const BVHNode* node, const glm::vec3& rayStart, const glm::vec3& rayDirection) const;
 };
