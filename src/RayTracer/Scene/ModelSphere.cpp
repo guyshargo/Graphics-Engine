@@ -1,8 +1,9 @@
-#include "ModelSphere.h"
-#include "Utilities.h"
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+
+#include "./Scene/ModelSphere.h"
+#include "../Utilities/ParserUtils.h"
 
 ModelSphere::ModelSphere() 
     : center(0.0f, 0.0f, 0.0f), radius(0.0f), materialIndex(0), textureIndex(0) {}
@@ -13,18 +14,18 @@ ModelSphere::ModelSphere(glm::vec3 center, float radius, int materialIndex, int 
 ModelSphere::ModelSphere(const std::string& toStringStr) {
     std::istringstream scanner(toStringStr);
     try {
-        Utilities::parseTokenWithoutParameter(scanner, "Sphere");
+        ParserUtils::parseTokenWithoutParameter(scanner, "Sphere");
         
         // Force strict evaluation order
-        float cx = Utilities::parseTokenFloat(scanner, "center_x");
-        float cy = Utilities::parseTokenFloat(scanner, "center_y");
-        float cz = Utilities::parseTokenFloat(scanner, "center_z");
+        float cx = ParserUtils::parseTokenFloat(scanner, "center_x");
+        float cy = ParserUtils::parseTokenFloat(scanner, "center_y");
+        float cz = ParserUtils::parseTokenFloat(scanner, "center_z");
         
         center = glm::vec3(cx, cy, cz);
         
-        radius = Utilities::parseTokenFloat(scanner, "radius");
-        materialIndex = Utilities::parseTokenInt(scanner, "materialIndex");
-        textureIndex = Utilities::parseTokenInt(scanner, "textureIndex");
+        radius = ParserUtils::parseTokenFloat(scanner, "radius");
+        materialIndex = ParserUtils::parseTokenInt(scanner, "materialIndex");
+        textureIndex = ParserUtils::parseTokenInt(scanner, "textureIndex");
         
     } catch (const std::exception& e) {
         std::string errorMessage = std::string(e.what()) + 

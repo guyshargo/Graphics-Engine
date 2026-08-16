@@ -1,8 +1,8 @@
 #include "ObjectModel.h"
 #include "RasterizerWorld.h"
 #include "BarycentricCoordinates.h"
-#include "Utilities.h"
 #include "PlaneData.h"
+#include "LightingUtils.h"
 #include "DefaultParams.h"
 #include "YourUtilities.h"
 #include "VertexData.h"
@@ -265,7 +265,7 @@ void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexDat
 
     // calculate lighting for a vertex for 'gourard shading'
     if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
-        float vertexLighting = Utilities::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
+        float vertexLighting = LightingUtils::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
                                                 rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
                                                 rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
 
@@ -420,7 +420,7 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
         float faceLevelOfDetail = std::log2(std::max(std::max(texelsX, texelsY), 1.0f));
 
         // for flat shading
-        float polygonLighting = Utilities::lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
+        float polygonLighting = LightingUtils::lightingEquation(vertex1.pointEyeCoordinates, faceNormal, lightPositionEyeCoordinates,
                                                             rasterizerWorld -> lighting_Diffuse, 
                                                             rasterizerWorld -> lighting_Specular,
                                                             rasterizerWorld -> lighting_Ambient, 
@@ -563,7 +563,7 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 
     } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
         // calculate light for every pixel with its unique location and normal
-        float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
+        float pixelLighting = LightingUtils::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                         lightPositionEyeCoordinates,
                                                         rasterizerWorld -> lighting_Diffuse,
                                                         rasterizerWorld -> lighting_Specular,
@@ -589,7 +589,7 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
         glm::vec3 finalTexColor = glm::mix(color1, color2, fractionalLOD);
 
         if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
-            float pixelLighting = Utilities::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
+            float pixelLighting = LightingUtils::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                     lightPositionEyeCoordinates,
                                                     rasterizerWorld->lighting_Diffuse, rasterizerWorld->lighting_Specular,
                                                     rasterizerWorld->lighting_Ambient, rasterizerWorld->lighting_sHininess);

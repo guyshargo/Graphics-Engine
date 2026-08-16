@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
-#include "ModelSphere.h"
+#include "./Scene/ModelSphere.h"
 
 struct IntersectionResults {
     // The point of intersection on the ray

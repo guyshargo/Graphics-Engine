@@ -4,7 +4,7 @@
 #include "ModelLight.h"
 #include "ModelMaterial.h"
 #include "ModelSphere.h"
-#include "SphereTexture.h"
+#include "./Textures/SphereTexture.h"
 
 class Model {
 public:

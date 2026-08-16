@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <glm/glm.hpp>
 
 namespace DefaultParams {
     
@@ -7,7 +8,7 @@ namespace DefaultParams {
     constexpr int IMAGE_HEIGHT = 600;
 
     // --- Ray Tracer default model ---
-    inline const std::string RT_MODEL_FILE_NAME = "../../RT_Models/ex_02___skybox_with_direction_labels.model";
+    inline const std::string RT_MODEL_FILE_NAME = "RT_Models/ex_02___skybox_with_direction_labels.model";
     constexpr int DEPTH_OF_RAY_TRACING = 6;
     inline int ANTIALIASING_SAMPLES = 16;
     inline int SOFT_SHADOW_SAMPLES = 2;
@@ -22,7 +23,7 @@ namespace DefaultParams {
     constexpr float FOCAL_DISTANCE = 5.0f;
 
     // --- Rasterizer default model ---
-    inline const std::string RAST_MODEL_FILE_NAME = "../../RAST_Models/models_with_textures/sheep.obj";
+    inline const std::string RAST_MODEL_FILE_NAME = "RAST_Models/models_with_textures/sheep.obj";
 
     constexpr float INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER = 5.0f;
     constexpr float CAMERA_MAX_VERTICAL_ANGLE = 60.0f;

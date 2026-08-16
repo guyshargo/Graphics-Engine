@@ -6,7 +6,7 @@
 #include <vector>
 #include "IntersectionResults.h"
 #include "SavedParams.h"
-#include "SphereTexture.h"
+#include "./Textures/SphereTexture.h"
 
 class Model;
 

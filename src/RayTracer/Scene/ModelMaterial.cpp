@@ -1,8 +1,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
-#include "ModelMaterial.h"
-#include "Utilities.h"
+#include "./Scene/ModelMaterial.h"
+#include "../Utilities/ParserUtils.h"
 
 ModelMaterial::ModelMaterial()
     : kColor(0.0f), color(0.0f), kDirect(0.0f), ka(0.0f), kd(0.0f), ks(0.0f),
@@ -12,41 +12,41 @@ ModelMaterial::ModelMaterial()
 ModelMaterial::ModelMaterial(const std::string& toStringStr) {
     std::istringstream scanner(toStringStr);
     try {
-        Utilities::parseTokenWithoutParameter(scanner, "Material");
-        kColor = Utilities::parseTokenFloat(scanner, "kColor");
+        ParserUtils::parseTokenWithoutParameter(scanner, "Material");
+        kColor = ParserUtils::parseTokenFloat(scanner, "kColor");
         
         // Force strict evaluation order for color
-        float cR = Utilities::parseTokenFloat(scanner, "color_R");
-        float cG = Utilities::parseTokenFloat(scanner, "color_G");
-        float cB = Utilities::parseTokenFloat(scanner, "color_B");
+        float cR = ParserUtils::parseTokenFloat(scanner, "color_R");
+        float cG = ParserUtils::parseTokenFloat(scanner, "color_G");
+        float cB = ParserUtils::parseTokenFloat(scanner, "color_B");
         color = glm::vec3(cR, cG, cB);
         
-        kDirect = Utilities::parseTokenFloat(scanner, "kDirect");
+        kDirect = ParserUtils::parseTokenFloat(scanner, "kDirect");
         
         // Force strict evaluation order for ka
-        float kaR = Utilities::parseTokenFloat(scanner, "ka_R");
-        float kaG = Utilities::parseTokenFloat(scanner, "ka_G");
-        float kaB = Utilities::parseTokenFloat(scanner, "ka_B");
+        float kaR = ParserUtils::parseTokenFloat(scanner, "ka_R");
+        float kaG = ParserUtils::parseTokenFloat(scanner, "ka_G");
+        float kaB = ParserUtils::parseTokenFloat(scanner, "ka_B");
         ka = glm::vec3(kaR, kaG, kaB);
         
         // Force strict evaluation order for kd
-        float kdR = Utilities::parseTokenFloat(scanner, "kd_R");
-        float kdG = Utilities::parseTokenFloat(scanner, "kd_G");
-        float kdB = Utilities::parseTokenFloat(scanner, "kd_B");
+        float kdR = ParserUtils::parseTokenFloat(scanner, "kd_R");
+        float kdG = ParserUtils::parseTokenFloat(scanner, "kd_G");
+        float kdB = ParserUtils::parseTokenFloat(scanner, "kd_B");
         kd = glm::vec3(kdR, kdG, kdB);
         
         // Force strict evaluation order for ks
-        float ksR = Utilities::parseTokenFloat(scanner, "ks_R");
-        float ksG = Utilities::parseTokenFloat(scanner, "ks_G");
-        float ksB = Utilities::parseTokenFloat(scanner, "ks_B");
+        float ksR = ParserUtils::parseTokenFloat(scanner, "ks_R");
+        float ksG = ParserUtils::parseTokenFloat(scanner, "ks_G");
+        float ksB = ParserUtils::parseTokenFloat(scanner, "ks_B");
         ks = glm::vec3(ksR, ksG, ksB);
         
-        shininess = Utilities::parseTokenFloat(scanner, "shininess");
-        kReflection = Utilities::parseTokenFloat(scanner, "kReflection");
-        kTransmission = Utilities::parseTokenFloat(scanner, "kTransmission");
-        refractiveIndex = Utilities::parseTokenFloat(scanner, "refractiveIndex");
-        kTexture = Utilities::parseTokenFloat(scanner, "kTexture");
-        comment = Utilities::parseTokenRestOfString(scanner, "comment");
+        shininess = ParserUtils::parseTokenFloat(scanner, "shininess");
+        kReflection = ParserUtils::parseTokenFloat(scanner, "kReflection");
+        kTransmission = ParserUtils::parseTokenFloat(scanner, "kTransmission");
+        refractiveIndex = ParserUtils::parseTokenFloat(scanner, "refractiveIndex");
+        kTexture = ParserUtils::parseTokenFloat(scanner, "kTexture");
+        comment = ParserUtils::parseTokenRestOfString(scanner, "comment");
 
     } catch (const std::exception& e) {
         std::string errorMessage = std::string(e.what()) + 

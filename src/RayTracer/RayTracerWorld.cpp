@@ -1,16 +1,17 @@
 #include <cmath>
 #include <random>
+#include <iostream>
 #include <glm/gtc/constants.hpp> // For math constants
 #include <glm/trigonometric.hpp> // For radians() and tan()
 
 #include "RayTracerWorld.h"
-#include "Model.h"
+#include "./Scene/Model.h"
 #include "IntersectionResults.h"
-#include "SphereTexture.h"
+#include "./Textures/SphereTexture.h"
 #include "YourUtilities.h"
-#include "ModelSphere.h"
-#include "ModelMaterial.h"
-#include "Utilities.h"
+#include "./Scene/ModelSphere.h"
+#include "./Scene/ModelMaterial.h"
+#include "LightingUtils.h"
 
 
 RayTracerWorld::RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree) : imageWidth(imageWidth), imageHeight(imageHeight) {}
@@ -134,11 +135,11 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
                                                         intersectedSphereMaterial.kd, intersectedSphereMaterial.kTexture);
 
     // Calculate diffuse, specular, and ambient lighting without shadows
-    glm::vec3 fullLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+    glm::vec3 fullLighting = LightingUtils::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
         combinedKd, intersectedSphereMaterial.ks, intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
 
     // Calculate only the ambient light so shadowed surfaces retain it
-    glm::vec3 ambientLighting = Utilities::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
+    glm::vec3 ambientLighting = LightingUtils::lightingEquation(intersectionPoint, intersectionNormal, model.lights[0].location,
                                 glm::vec3(0.0f), glm::vec3(0.0f), intersectedSphereMaterial.ka, intersectedSphereMaterial.shininess);
 
     // Calculate the fraction of sampled light rays blocked by geometry

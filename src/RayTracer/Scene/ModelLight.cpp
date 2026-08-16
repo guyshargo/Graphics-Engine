@@ -1,8 +1,9 @@
-#include "ModelLight.h"
-#include "Utilities.h"
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
+
+#include "./Scene/ModelLight.h"
+#include "../Utilities/ParserUtils.h"
 
 ModelLight::ModelLight() 
     : location(0.0f, 0.0f, 0.0f), intensity(1.0f), radius(0.0f), comment("") {}
@@ -13,25 +14,25 @@ ModelLight::ModelLight(glm::vec3 location, float intensity, float radius, const 
 ModelLight::ModelLight(const std::string& toStringStr) {
     std::istringstream scanner(toStringStr);
     try {
-        Utilities::parseTokenWithoutParameter(scanner, "Light");
+        ParserUtils::parseTokenWithoutParameter(scanner, "Light");
         
         // Force strict evaluation order
-        float locX = Utilities::parseTokenFloat(scanner, "location_x");
-        float locY = Utilities::parseTokenFloat(scanner, "location_y");
-        float locZ = Utilities::parseTokenFloat(scanner, "location_z");
+        float locX = ParserUtils::parseTokenFloat(scanner, "location_x");
+        float locY = ParserUtils::parseTokenFloat(scanner, "location_y");
+        float locZ = ParserUtils::parseTokenFloat(scanner, "location_z");
         
         location = glm::vec3(locX, locY, locZ);
         
-        intensity = Utilities::parseTokenFloat(scanner, "intensity");
+        intensity = ParserUtils::parseTokenFloat(scanner, "intensity");
 
         if (toStringStr.find("radius:") != std::string::npos) {
-            radius = Utilities::parseTokenFloat(scanner, "radius");
+            radius = ParserUtils::parseTokenFloat(scanner, "radius");
         } else {
             // Default radius for files missing the parameter
             radius = 2.0f; 
         }
         
-        comment = Utilities::parseTokenRestOfString(scanner, "comment");
+        comment = ParserUtils::parseTokenRestOfString(scanner, "comment");
         
     } catch (const std::exception& e) {
         std::string errorMessage = std::string(e.what()) + 

@@ -1,10 +1,11 @@
-#include "Model.h"
-#include "Utilities.h"
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <iostream>
 #include <filesystem>
+
+#include "./Scene/Model.h"
+#include "../Utilities/ParserUtils.h"
 
 // Default constructor
 Model::Model() : fovXdegree(0.0f), skyBoxImageFileName(""), comment("") {}
@@ -38,20 +39,20 @@ Model::Model(const std::string& modelFilename) : fovXdegree(0.0f) {
 
         try {
             if (lineType == "comment") {
-                comment = Utilities::parseTokenRestOfString(lineScanner, "comment");
+                comment = ParserUtils::parseTokenRestOfString(lineScanner, "comment");
             } 
             else if (lineType == "fovXdegree") {
-                fovXdegree = Utilities::parseTokenFloat(lineScanner, "fovXdegree");
+                fovXdegree = ParserUtils::parseTokenFloat(lineScanner, "fovXdegree");
             } 
             else if (lineType == "skyBoxImageFileName") {
-                skyBoxImageFileName = Utilities::parseTokenRestOfString(lineScanner, "skyBoxImageFileName");
+                skyBoxImageFileName = ParserUtils::parseTokenRestOfString(lineScanner, "skyBoxImageFileName");
                 if (!skyBoxImageFileName.empty() && skyBoxImageFileName.back() == '\r') skyBoxImageFileName.pop_back();
             } 
             else if (lineType == "Light") {
                 lights.emplace_back(line);
             } 
             else if (lineType == "sphereTextureFileName") {
-                std::string sphereTextureFileName = Utilities::parseTokenRestOfString(lineScanner, "sphereTextureFileName");
+                std::string sphereTextureFileName = ParserUtils::parseTokenRestOfString(lineScanner, "sphereTextureFileName");
                 if (!sphereTextureFileName.empty() && sphereTextureFileName.back() == '\r') sphereTextureFileName.pop_back();
                 sphereTextureFileNames.push_back(sphereTextureFileName);
             } 
