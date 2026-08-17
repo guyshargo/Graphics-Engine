@@ -1,7 +1,8 @@
-#include "Application.h"
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+
+#include "Application.h"
 #include "PlatformUtils.h"
 #include "ParameterSerializer.h"
 #include "ImageUtils.h"
@@ -157,8 +158,8 @@ void Application::ProcessEvents() {
 void Application::HandleOpenFile() {
     // Determine the starting folder based on which engine is currently active
     std::string modelsDir = (m_CurrentMode == EngineMode::RASTERIZATION) 
-        ? std::filesystem::absolute("../../RAST_Models").string() 
-        : std::filesystem::absolute("../../RT_Models").string();
+        ? std::filesystem::absolute("../../assets/RAST_Models").string() 
+        : std::filesystem::absolute("../../assets/RT_Models").string();
 
     std::string newPath = (m_CurrentMode == EngineMode::RASTERIZATION) 
         ? PlatformUtils::openFileChooser("obj", modelsDir)
