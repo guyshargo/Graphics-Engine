@@ -116,18 +116,18 @@ By bypassing hardware-accelerated graphics APIs (like OpenGL or DirectX), this e
 
 ## Building the Project
 
-* **Option 1: Pre-Built Executable**
+### Option 1: Pre-Built Executable
 [Download the pre-built Windows executable from the Releases tab](https://github.com/guyshargo/Graphics-Engine/releases).
 
-* **Option 2: Build from Source**
+### Option 2: Build from Source
 This project uses CMake for cross-platform build generation. Because all external libraries are fetched automatically, the build process is entirely self-contained.
 
-### Prerequisites
-* CMake (v3.15 or higher)
-* A C++17 compatible compiler
-* Git (required for CMake to fetch dependencies)
+* **Prerequisites**
+    * CMake (v3.15 or higher)
+    * A C++17 compatible compiler
+    * Git (required for CMake to fetch dependencies)
 
-### Build Steps
+* **Build Steps**
 1. Clone the repository:
 ```bash
     git clone https://github.com/guyshargo/Graphics-Engine.git
