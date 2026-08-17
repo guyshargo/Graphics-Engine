@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "./Scene/ModelLight.h"
+#include "ModelLight.h"
 #include "../Utilities/ParserUtils.h"
 
 ModelLight::ModelLight() 
@@ -16,7 +16,7 @@ ModelLight::ModelLight(const std::string& toStringStr) {
     try {
         ParserUtils::parseTokenWithoutParameter(scanner, "Light");
         
-        // Force strict evaluation order
+        // Extract 3D position coordinates in a strict order to prevent stream desynchronization
         float locX = ParserUtils::parseTokenFloat(scanner, "location_x");
         float locY = ParserUtils::parseTokenFloat(scanner, "location_y");
         float locZ = ParserUtils::parseTokenFloat(scanner, "location_z");
@@ -25,13 +25,14 @@ ModelLight::ModelLight(const std::string& toStringStr) {
         
         intensity = ParserUtils::parseTokenFloat(scanner, "intensity");
 
+        // Accommodate older scene files that might not include a soft shadow radius
         if (toStringStr.find("radius:") != std::string::npos) {
             radius = ParserUtils::parseTokenFloat(scanner, "radius");
         } else {
-            // Default radius for files missing the parameter
-            radius = 2.0f; 
+            radius = 2.0f; // Default radius fallback
         }
         
+        // Consume the rest of the line as an optional description
         comment = ParserUtils::parseTokenRestOfString(scanner, "comment");
         
     } catch (const std::exception& e) {
@@ -41,12 +42,4 @@ ModelLight::ModelLight(const std::string& toStringStr) {
         std::cerr << errorMessage << std::endl;
         throw std::runtime_error(errorMessage);
     }
-}
-
-std::string ModelLight::toString() const {
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), 
-             "Light: location_x: %f location_y: %f location_z: %f intensity: %f radius: %f comment: %s",
-             location.x, location.y, location.z, intensity, radius, comment.c_str());
-    return std::string(buffer);
 }

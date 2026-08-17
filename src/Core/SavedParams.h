@@ -3,6 +3,10 @@
 #include "ExerciseEnum.h"
 #include "DefaultParams.h"
 
+/**
+ * @brief A centralized container that holds every active setting currently selected in the UI. 
+ *        This single object is passed to the rendering engines and used to save user data.
+ */
 class SavedParams {
 private:
     // RayTracer
@@ -16,7 +20,6 @@ private:
     RayTracingExerciseEnum rtExercise = static_cast<RayTracingExerciseEnum>(0);
 
     // Rasterizer
-    RasterizationExerciseEnum rastExercise = static_cast<RasterizationExerciseEnum>(0);
     ProjectionTypeEnum projectionType = ProjectionTypeEnum::ORTHOGRAPHIC;
     DisplayTypeEnum displayType = DisplayTypeEnum::FACE_EDGES;
     bool displayNormals = false;
@@ -34,7 +37,6 @@ public:
     float getFocalDistance() const { return focalDistance; }
     RayTracingExerciseEnum getRtExercise() const { return rtExercise; }
 
-    RasterizationExerciseEnum getRastExercise() const { return rastExercise; }
     ProjectionTypeEnum getProjectionType() const { return projectionType; }
     DisplayTypeEnum getDisplayType() const { return displayType; }
     bool isDisplayNormals() const { return displayNormals; }
@@ -49,11 +51,8 @@ public:
         else rtModelFileName = fileName;
     }
 
-    void setExercise(EngineMode currentMode, int exerciseValue) {
-        if (currentMode == EngineMode::RASTERIZATION)
-            rastExercise = static_cast<RasterizationExerciseEnum>(exerciseValue);
-        else
-            rtExercise = static_cast<RayTracingExerciseEnum>(exerciseValue);
+    void setRtExercise(int exerciseValue) {
+        rtExercise = static_cast<RayTracingExerciseEnum>(exerciseValue);
     }
 
     void setDepthOfRayTracing(int depth) { depthOfRayTracing = depth; }

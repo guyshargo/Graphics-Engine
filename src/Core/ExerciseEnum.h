@@ -1,6 +1,10 @@
 #pragma once
 #include <magic_enum.hpp>
 
+/**
+ * @brief Defines the exact text labels used to switch between different rendering techniques, 
+ *        mathematical exercises, and camera types within the engine's user interface.
+ */
 enum class EngineMode {
     RAY_TRACING,
     RASTERIZATION
@@ -18,18 +22,6 @@ enum class RayTracingExerciseEnum {
     EX_5_Texture,
     EX_7_Reflection,
     EX_8_Transparency
-};
-
-enum class RasterizationExerciseEnum {
-    EX_1_Lines_rasterization,
-    EX_2_Triangles_rasterization,
-    EX_4_Orthograpic_projection_and_viewport,
-    EX_5_lookat,
-    EX_6_Perspective_projection,
-    EX_7_Vertex_color_interpolation,
-    EX_8_Z_buffer,
-    EX_9_Lighting,
-    EX_10_Texture
 };
 
 enum class DisplayTypeEnum {

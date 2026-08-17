@@ -26,20 +26,27 @@ Application::~Application() {
 }
 
 bool Application::Init() {
+    // Attempt to connect to the operating system's video subsystem
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Failed to initialize SDL: " << SDL_GetError() << std::endl;
         return false;
     }
 
+    // Spawn the actual window the user will see
     m_Window = SDL_CreateWindow("Graphics Engine (C++)",
                                 SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                 DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 
                                 SDL_WINDOW_SHOWN);
+
+    // Create the hardware-accelerated drawing context
     m_Renderer = SDL_CreateRenderer(m_Window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+
+    // Allocate a raw block of GPU memory that we will overwrite pixel-by-pixel
     m_Texture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, 
                                   SDL_TEXTUREACCESS_STREAMING, 
                                   DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
 
+    // Initialize the ImGui interface layer
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -49,18 +56,20 @@ bool Application::Init() {
     m_CurrentMode = EngineMode::RAY_TRACING;
     m_UpdateWindowFlag = true; 
 
+    // Prepare the raw pixel buffer with a default dark gray background color
     m_PixelBuffer.resize(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT, 0xFF323232);
     m_PixelIndices.resize(DefaultParams::IMAGE_WIDTH * DefaultParams::IMAGE_HEIGHT);
-    std::iota(m_PixelIndices.begin(), m_PixelIndices.end(), 0);
     
+    // Create a shuffled list of pixel coordinates so the ray tracer renders pixels in a randomized, progressive scatter pattern
+    std::iota(m_PixelIndices.begin(), m_PixelIndices.end(), 0);
     std::random_device randomSeed;
     m_PixelOrderGenerator = std::mt19937(randomSeed());
     std::shuffle(m_PixelIndices.begin(), m_PixelIndices.end(), m_PixelOrderGenerator);
 
-    // Load parameters
+    // Read the user's previous configuration from the JSON file
     ParameterSerializer::Load(m_Params);
 
-    // Load RayTracer Parameters
+    // Inject loaded parameters directly into the Ray Tracer
     m_IsRtLoaded = m_RayTracerWorld.load(m_Params.getRtModelFileName()); 
     m_RayTracerWorld.setDepthOfRayTracing(m_Params.getDepthOfRayTracing());
     m_RayTracerWorld.setAntialiasingSamples(m_Params.getAntialiasingSamples());
@@ -70,11 +79,13 @@ bool Application::Init() {
     m_RayTracerWorld.setExercise(m_Params.getRtExercise());
     m_SelectedRtExercise = static_cast<int>(m_Params.getRtExercise());
 
-    // Load Rasterizer Parameters
+    // Inject loaded parameters directly into the Rasterizer
     m_IsRastLoaded = m_RasterizerWorld.load(m_Params.getRastModelFileName());
-    m_RasterizerWorld.exercise = m_Params.getRastExercise();
-    m_SelectedRastExercise = static_cast<int>(m_Params.getRastExercise());
+    m_RasterizerWorld.projectionType = m_Params.getProjectionType();
+    m_RasterizerWorld.displayType = m_Params.getDisplayType();
+    m_RasterizerWorld.displayNormals = m_Params.isDisplayNormals();
     
+    // Apply hardcoded camera defaults for the Rasterizer
     m_RasterizerWorld.cameraPos = DefaultParams::cameraPos;
     m_RasterizerWorld.cameraLookAtCenter = DefaultParams::cameraLookAtCenter;
     m_RasterizerWorld.cameraUp = DefaultParams::cameraUp;
@@ -87,10 +98,6 @@ bool Application::Init() {
     m_RasterizerWorld.lighting_sHininess = DefaultParams::LIGHTING_SHININESS;
     m_RasterizerWorld.lightPositionWorldCoordinates = DefaultParams::lightPosition;
 
-    m_RasterizerWorld.projectionType = m_Params.getProjectionType();
-    m_RasterizerWorld.displayType = m_Params.getDisplayType();
-    m_RasterizerWorld.displayNormals = m_Params.isDisplayNormals();
-
     m_IsRunning = true;
     m_CurrentPixelIndex = 0;
     
@@ -98,16 +105,22 @@ bool Application::Init() {
 }
 
 void Application::Run() {
+    // The core execution loop of the program
     while (m_IsRunning) {
         ProcessEvents();
-        Update();
         RenderUI();
         RenderGraphics();
         
         ImGui::Render();
         SDL_RenderClear(m_Renderer);
-        SDL_RenderCopy(m_Renderer, m_Texture, nullptr, nullptr); 
-        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData()); 
+
+        // Push the fully calculated 2D pixel buffer to the GPU texture
+        SDL_RenderCopy(m_Renderer, m_Texture, nullptr, nullptr);
+
+        // Draw the UI panels over the 3D output
+        ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+
+        // Display the combined frame on the monitor
         SDL_RenderPresent(m_Renderer);
     }
 }
@@ -115,11 +128,13 @@ void Application::Run() {
 void Application::ProcessEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        // Forward inputs to ImGui first so it can interact with buttons/sliders
         ImGui_ImplSDL2_ProcessEvent(&event);
         if (event.type == SDL_QUIT) {
             m_IsRunning = false;
         }
 
+        // Process direct viewport interaction only if the Rasterizer is active and the mouse is not clicking a UI panel
         if (m_CurrentMode == EngineMode::RASTERIZATION && !ImGui::GetIO().WantCaptureMouse) {
             if (event.type == SDL_MOUSEWHEEL) {
                 m_RasterizerWorld.zoomCamera(static_cast<float>(event.wheel.y));
@@ -140,6 +155,7 @@ void Application::ProcessEvents() {
 }
 
 void Application::HandleOpenFile() {
+    // Determine the starting folder based on which engine is currently active
     std::string modelsDir = (m_CurrentMode == EngineMode::RASTERIZATION) 
         ? std::filesystem::absolute("../../RAST_Models").string() 
         : std::filesystem::absolute("../../RT_Models").string();
@@ -149,6 +165,7 @@ void Application::HandleOpenFile() {
         : PlatformUtils::openFileChooser("model", modelsDir);
 
     if (!newPath.empty()) {
+        // Truncate the absolute path to keep configuration files portable across different machines
         std::string relativePath = PlatformUtils::getRelativePath(newPath);
         m_Params.setModelFileName(m_CurrentMode, relativePath);
 
@@ -158,13 +175,9 @@ void Application::HandleOpenFile() {
             m_IsRtLoaded = m_RayTracerWorld.load(relativePath);
         }
 
+        // Flag the screen for a complete redraw with the new model
         m_UpdateWindowFlag = true;
     }
-}
-
-void Application::Update() {
-    // Left intentionally empty for now.
-    // Frame delta times, physics updates, and animations will go here.
 }
 
 void Application::RenderUI() {
@@ -192,7 +205,7 @@ void Application::RenderUI() {
                 bool isSelected = (m_SelectedRtExercise == static_cast<int>(val));
                 if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
                     m_SelectedRtExercise = static_cast<int>(val);
-                    m_Params.setExercise(m_CurrentMode, m_SelectedRtExercise);
+                    m_Params.setRtExercise(m_SelectedRtExercise);
                     m_RayTracerWorld.setExercise(m_Params.getRtExercise());
                     m_UpdateWindowFlag = true;
                 }
@@ -270,20 +283,6 @@ void Application::RenderUI() {
         }
         ImGui::TextWrapped("Model: %s", m_Params.getRastModelFileName().c_str());
 
-        std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RasterizationExerciseEnum>(m_SelectedRastExercise)));
-        if (ImGui::BeginCombo("Rast Exercise", currentExerciseName.c_str())) {
-            for (const auto& val : magic_enum::enum_values<RasterizationExerciseEnum>()) {
-                bool isSelected = (m_SelectedRastExercise == static_cast<int>(val));
-                if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
-                    m_SelectedRastExercise = static_cast<int>(val);
-                    m_Params.setExercise(m_CurrentMode, m_SelectedRastExercise);
-                    m_RasterizerWorld.exercise = m_Params.getRastExercise();
-                    m_UpdateWindowFlag = true;
-                }
-            }
-            ImGui::EndCombo();
-        }
-
         std::string currentDisplayTypeName = std::string(magic_enum::enum_name(m_RasterizerWorld.displayType));
         if (ImGui::BeginCombo("Display Type", currentDisplayTypeName.c_str())) {
             for (const auto& val : magic_enum::enum_values<DisplayTypeEnum>()) {
@@ -333,6 +332,7 @@ void Application::RenderUI() {
 }
 
 void Application::RenderGraphics() {
+    // Wipe the screen and reset tracking variables when a parameter changes
     if (m_UpdateWindowFlag) {
         if (m_CurrentMode == EngineMode::RAY_TRACING) {
             m_CurrentPixelIndex = 0;
@@ -351,28 +351,34 @@ void Application::RenderGraphics() {
             clearImage();
             if (m_IsRastLoaded) {
                 m_RasterizerWorld.render(clearImage, setPixel);
+
+                // Immediately update the texture since rasterization completes in one frame
                 SDL_UpdateTexture(m_Texture, nullptr, m_PixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
             }
             m_UpdateWindowFlag = false;
         }
     }
 
-    // Ray Tracing Processing (Iterative & Parallelized)
+    // Process Ray Tracing in iterative chunks to keep the window responsive during heavy calculations
     if (m_CurrentMode == EngineMode::RAY_TRACING && m_IsRtLoaded && m_CurrentPixelIndex < m_PixelIndices.size()) {
         const size_t PIXELS_PER_FRAME = 5000;
         size_t endPixelIndex = std::min(m_CurrentPixelIndex + PIXELS_PER_FRAME, m_PixelIndices.size());
 
+        // Multi-thread the rendering calculations across all available CPU cores
         std::for_each(std::execution::par, 
-                      m_PixelIndices.begin() + m_CurrentPixelIndex, 
-                      m_PixelIndices.begin() + endPixelIndex, 
-                      [this](int pixelIndex) {
-                          int x = pixelIndex % DefaultParams::IMAGE_WIDTH;
-                          int y = pixelIndex / DefaultParams::IMAGE_WIDTH;
-                          glm::vec3 color = m_RayTracerWorld.renderPixel(x, y);
-                          ImageUtils::WriteColorToBuffer(m_PixelBuffer, x, y, color, DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
-                      });
+                        m_PixelIndices.begin() + m_CurrentPixelIndex, 
+                        m_PixelIndices.begin() + endPixelIndex, 
+                        [this](int pixelIndex) {
+                            // Extract the 2D coordinate from the flattened 1D array index
+                            int x = pixelIndex % DefaultParams::IMAGE_WIDTH;
+                            int y = pixelIndex / DefaultParams::IMAGE_WIDTH;
+                            glm::vec3 color = m_RayTracerWorld.renderPixel(x, y);
+                            ImageUtils::WriteColorToBuffer(m_PixelBuffer, x, y, color, DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT);
+                        });
         
         m_CurrentPixelIndex = endPixelIndex;
+
+        // Progressively push the newly calculated pixel chunk to the screen
         SDL_UpdateTexture(m_Texture, nullptr, m_PixelBuffer.data(), DefaultParams::IMAGE_WIDTH * sizeof(uint32_t));
     }
 }
@@ -380,12 +386,14 @@ void Application::RenderGraphics() {
 void Application::Shutdown() {
     if (m_Renderer || m_Window || m_Texture) {
 
+        // Save current UI state to the JSON file before closing
         ParameterSerializer::Save(m_Params);
 
         ImGui_ImplSDLRenderer2_Shutdown();
         ImGui_ImplSDL2_Shutdown();
         ImGui::DestroyContext();
 
+        // Safely destroy the SDL hardware context to prevent driver memory leaks
         if (m_Texture) SDL_DestroyTexture(m_Texture);
         if (m_Renderer) SDL_DestroyRenderer(m_Renderer);
         if (m_Window) SDL_DestroyWindow(m_Window);

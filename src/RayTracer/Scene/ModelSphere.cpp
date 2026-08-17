@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 
-#include "./Scene/ModelSphere.h"
+#include "ModelSphere.h"
 #include "../Utilities/ParserUtils.h"
 
 ModelSphere::ModelSphere() 
@@ -34,12 +34,4 @@ ModelSphere::ModelSphere(const std::string& toStringStr) {
         std::cerr << errorMessage << std::endl;
         throw std::runtime_error(errorMessage);
     }
-}
-
-std::string ModelSphere::toString() const {
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), 
-             "Sphere: center_x: %f center_y: %f center_z: %f radius: %f materialIndex: %d textureIndex: %d",
-             center.x, center.y, center.z, radius, materialIndex, textureIndex);
-    return std::string(buffer);
 }

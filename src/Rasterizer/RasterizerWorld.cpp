@@ -28,7 +28,7 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
     glm::vec3 objectCenter = object1 -> getBoundingBoxCenter();
     glm::mat4 identity(1.0f);
 
-    // Translate the object's center to the world origin
+    // Shift the object so its exact center sits at the world origin (0,0,0) to ensure it rotates uniformly
     glm::mat4 toOrigin = glm::translate(identity, -objectCenter);
     glm::mat4 backFromOrigin = glm::translate(identity, objectCenter);
     
@@ -42,7 +42,7 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
     glm::mat4 scaleM = glm::scale(identity, objectScale);
     glm::mat4 worldPosM = glm::translate(identity, objectPosition);
 
-    // Apply scale & rotation around the center, then move it to the requested world position
+    // Apply scale and rotation while centered, then move the object to its final requested world position
     glm::mat4 modelM = worldPosM * backFromOrigin * rotationM * scaleM * toOrigin;
     object1 -> setModelM(modelM);
 
@@ -70,6 +70,8 @@ void RasterizerWorld::render(const ClearImageCallback& clearImage, const SetPixe
 }
 
 void RasterizerWorld::clearZbuffer() {
+
+    // Fill the depth buffer with the maximum possible distance so any new geometry draws over it
     std::fill(zBuffer.begin(), zBuffer.end(), std::numeric_limits<float>::max());
 }
 

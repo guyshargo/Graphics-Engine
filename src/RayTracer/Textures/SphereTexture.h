@@ -4,15 +4,15 @@
 #include <glm/glm.hpp>
 
 /**
- * The SphereTexture class represents a texture mapped onto a sphere and
- * provides methods to sample pixel colors based on direction vectors. 
+ * @brief The SphereTexture class represents a texture mapped onto a sphere and
+ *        provides methods to sample pixel colors based on direction vectors. 
  */
 class SphereTexture {
 public:
     /**
-     * Constructs a SphereTexture object by loading the image from the
-     * specified file path.
-     * Throws std::runtime_error if the image fails to load.
+     * @brief Loads an image from the hard drive to be used as a wraparound texture.
+     * 
+     * @param filepath The system path to the image file.
      */
     SphereTexture(const std::string& filepath);
 
@@ -29,7 +29,10 @@ public:
     SphereTexture& operator=(SphereTexture&& other) noexcept;
 
     /**
-     * Samples the color from the texture based on a given direction vector.
+     * @brief Finds the exact pixel color on the image based on which direction the light ray is pointing.
+     * 
+     * @param direction The 3D trajectory of the light ray looking out into the scene.
+     * @return The specific RGB color of the image at that mapped coordinate.
      */
     glm::vec3 sampleDirectionFromMiddle(const glm::vec3& direction) const;
 
@@ -37,7 +40,7 @@ private:
     int width;
     int height;
     int channels;
-    unsigned char* imageData; // Using unsigned char replaces Java's byte array
+    unsigned char* imageData;
     std::string filename;
 
     glm::vec3 getImagePixel(int x, int y) const;

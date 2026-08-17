@@ -9,25 +9,56 @@
 #include "ExerciseEnum.h"
 #include "./Scene/ObjectModel.h"
 
+/**
+ * @brief The main engine coordinator that manages the camera, tracks depth to ensure 
+ *        closer objects block further ones, and triggers the rendering pipeline for the scene.
+ */
 class RasterizerWorld {
 public:
+    /**
+     * @brief Configures the main rendering screen dimensions and prepares the depth buffer.
+     */
     RasterizerWorld(int imageWidth, int imageHeight);
 
+    /**
+     * @brief Directs the object model to read and load a 3D scene file from the hard drive.
+     */
     bool load(const std::string& fileName);
+
+    /**
+     * @brief Checks if the currently loaded 3D model has an associated image texture.
+     * 
+     * @return True if a texture is loaded and valid, false otherwise.
+     */
     bool modelHasTexture() const;
 
-    // Replacing IntBufferWrapper with standard callbacks
+    /**
+     * @brief Defines the expected function signature for clearing the output image buffer.
+     */
     using ClearImageCallback = std::function<void()>;
+
+    /**
+     * @brief Defines the expected function signature for plotting a single RGB color to a specific screen coordinate.
+     * 
+     * @param x The horizontal screen pixel coordinate.
+     * @param y The vertical screen pixel coordinate.
+     * @param color The final computed RGB color for the pixel.
+     */
     using SetPixelCallback = std::function<void(int x, int y, const glm::vec3& color)>;
 
+    /**
+     * @brief Clears the previous frame, calculates the camera's current perspective, 
+     *        and commands the loaded 3D models to draw themselves onto the screen.
+     * 
+     * @param clearImage The function executed to wipe the screen buffer clean.
+     * @param setPixel The function executed to draw the final calculated colors to the screen buffer.
+     */
     void render(const ClearImageCallback& clearImage, const SetPixelCallback& setPixel);
 
-    // type of rendering
+    // display options
     ProjectionTypeEnum projectionType;
     DisplayTypeEnum displayType;
     bool displayNormals = false;
-
-    RasterizationExerciseEnum exercise;
 
     // camera location parameters
     glm::vec3 cameraPos;
@@ -47,11 +78,30 @@ public:
     float lighting_sHininess;
     glm::vec3 lightPositionWorldCoordinates;
     
+    // depth buffer
     std::vector<float> zBuffer;
 
-    // Camera Controls
+    /**
+     * @brief Pushes the camera forward or backward along its current viewing trajectory.
+     * 
+     * @param scrollDelta The mouse wheel input determining the zoom direction and speed.
+     */
     void zoomCamera(float scrollDelta);
+
+    /**
+     * @brief Orbits the camera around the target center point by adjusting its pitch and yaw.
+     * 
+     * @param deltaX The horizontal mouse movement used to calculate the yaw rotation.
+     * @param deltaY The vertical mouse movement used to calculate the pitch rotation.
+     */
     void rotateCamera(float deltaX, float deltaY);
+
+    /**
+     * @brief Slides both the camera and its viewing target horizontally or vertically across the scene.
+     * 
+     * @param deltaX The horizontal mouse movement used to shift the camera on its local X axis.
+     * @param deltaY The vertical mouse movement used to shift the camera on its local Y axis.
+     */
     void panCamera(float deltaX, float deltaY);
     
 private:
@@ -66,5 +116,8 @@ private:
     float objectX;
     float objectY;
 
+    /**
+     * @brief Resets the depth tracking array to the maximum possible distance, preparing the engine for a new frame.
+     */
     void clearZbuffer();
 };

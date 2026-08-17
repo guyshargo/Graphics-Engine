@@ -53,15 +53,31 @@ class BarycentricCoordinates {
         bool isPointInsideTriangle() const;
 
         /**
-         * @brief Formats the calculated alpha, beta, and gamma into a string.
-         * @return String representation of the coordinates.
+         * @brief Retrieves the calculated weight of the first triangle corner.
+         * 
+         * @return A float representing the influence of corner one.
          */
-        std::string toString() const;
-
-        // Getters for the barycentric coordinates
         float getAlpha() const;
+
+        /**
+         * @brief Retrieves the calculated weight of the second triangle corner.
+         * 
+         * @return A float representing the influence of corner two.
+         */
         float getBeta() const;
+
+        /**
+         * @brief Retrieves the calculated weight of the third triangle corner.
+         * 
+         * @return A float representing the influence of corner three.
+         */
         float getGamma() const;
+
+        /**
+         * @brief Retrieves the calculated weight of the third triangle corner.
+         * 
+         * @return A float representing the influence of corner three.
+         */
         glm::vec3 getCoordinates() const;
     
         /**

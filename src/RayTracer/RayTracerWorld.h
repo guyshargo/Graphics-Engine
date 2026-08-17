@@ -16,11 +16,11 @@ class RayTracerWorld {
     public:
         
         /**
-         * @brief Initializes the RayTracerWorld with the specified image dimensions and field of view
-         *
-         * @param imageWidth The width of the image to be rendered
-         * @param imageHeight The height of the image to be rendered
-         * @param fovXdegree The horizontal field of view in degrees
+         * @brief Initializes the rendering engine, setting the resolution and the viewing angle for the scene.
+         * 
+         * @param imageWidth The horizontal pixel count of the final image.
+         * @param imageHeight The vertical pixel count of the final image.
+         * @param fovXdegree The horizontal field of view angle in degrees.
          */
         RayTracerWorld(int imageWidth, int imageHeight, float fovXdegree);
 
@@ -39,21 +39,38 @@ class RayTracerWorld {
 
 
         /**
-         * @brief Sets the rendering parameters used by the ray tracer
-         *
-         * @param depthOfRayTracing The maximum number of recursive ray bounces allowed
-         * @param antialiasingSamples The number of randomly sampled rays used per pixel
-         * @param softShadowSamples The number of sampled light rays used to estimate soft shadows
-         * @param exercise The ray-tracing exercise that determines which rendering features are enabled
+         * @brief Controls how many times a light ray is allowed to bounce off shiny or transparent objects before stopping.
+         * 
+         * @param depthOfRayTracing The maximum number of reflection or refraction bounces.
          */
         void setDepthOfRayTracing(int depthOfRayTracing);
 
+        /**
+         * @brief Controls how many rays are fired per pixel to smooth out jagged edges.
+         * 
+         * @param antialiasingSamples The total number of offset rays to calculate per screen pixel.
+         */
         void setAntialiasingSamples(int antialiasingSamples);
 
+        /**
+         * @brief Controls how many test rays are sent toward the light source to create blurry, realistic shadow edges.
+         * 
+         * @param softShadowSamples The total number of shadow-testing rays.
+         */
         void setSoftShadowSamples(int softShadowSamples);
 
+        /**
+         * @brief Adjusts the blurriness of out-of-focus objects.
+         * 
+         * @param aperatureRadius The width of the simulated aperture opening.
+         */
         void setAperatureRadius(float aperatureRadius);
 
+        /**
+         * @brief Sets the exact distance where objects appear perfectly sharp and in focus.
+         * 
+         * @param focalDistance The distance in 3D units from the camera to the focal plane.
+         */
         void setFocalDistance(float focalDistance);
                 
         /**
@@ -65,36 +82,33 @@ class RayTracerWorld {
 
         
         /**
-         * @brief Loads the model and skybox texture from the specified file, and initializes the Bounding Volume Hierarchy (BVH) tree
-         *
-         * @param filename The path to the .model file to be loaded
-         * @return true if the model, texture, and BVH tree loaded and initialized successfully; false otherwise
+         * @brief Reads a scene file to spawn the 3D objects, sets up the sky background, and organizes the spatial boundaries.
+         * 
+         * @param filename The system path to the scene configuration file.
+         * @return True if the scene and all assets successfully loaded, false otherwise.
          */
         bool load(const std::string& filename);
 
 
         /**
-         * @brief Renders and calculates the color of a pixel using multiple randomly sampled rays 
-         * for stochastic antialiasing
-         *
-         * @param x The horizontal coordinate of the pixel on the screen
-         * @param y The vertical coordinate of the pixel on the screen
-         * @return A glm::vec3 representing the averaged RGB color of the sampled rays
+         * @brief Fires light rays through a specific screen coordinate and averages their colors to determine the final pixel output.
+         * 
+         * @param x The horizontal screen pixel coordinate.
+         * @param y The vertical screen pixel coordinate.
+         * @return The final averaged RGB color for the given pixel.
          */
         glm::vec3 renderPixel(int x, int y);
 
 
         /**
-         * @brief Calculates the normalized direction vector from the camera eye to a point on the view plane
-         *
-         * Fractional coordinates are supported so to generate subpixel samples for antialiasing.
-         *
-         * @param x The horizontal coordinate of the target pixel
-         * @param y The vertical coordinate of the target pixel
-         * @param imageWidth The total width of the image
-         * @param imageHeight The total height of the image
-         * @param fovXdegree The horizontal field of view in degrees
-         * @return A normalized glm::vec3 representing the ray's direction in 3D space
+         * @brief Determines the exact 3D angle a light ray must travel to pass through a specific pixel on the screen.
+         * 
+         * @param x The horizontal screen pixel coordinate.
+         * @param y The vertical screen pixel coordinate.
+         * @param imageWidth The total width of the screen.
+         * @param imageHeight The total height of the screen.
+         * @param fovXdegree The horizontal field of view angle.
+         * @return The calculated 3D trajectory vector for the ray.
          */
         static glm::vec3 calcPixelDirection(float x, float y, int imageWidth, int imageHeight, float fovXdegree);
                                                                     
@@ -113,31 +127,28 @@ class RayTracerWorld {
                                                   const SphereTexture& intersectedSphereTexture, 
                                                   glm::vec3 intersectedSphereKd, 
                                                   float kTexture);
-
         
         /**
-         * @brief Determines if a specific surface point is occluded from the light source by checking the BVH tree for collisions along the shadow ray
-         *
-         * @param lightLocation The 3D coordinates of the light source
-         * @param point The surface point to test for shadows
-         * @param pointNormal The surface normal at the test point, used to offset the ray to prevent self-shadowing
-         * @param model The scene model
-         * @return true if the point is obstructed from the light (in shadow), false otherwise
+         * @brief Tests if other objects are blocking the light source from illuminating a specific point, darkening it if true.
+         * 
+         * @param lightLocation The 3D coordinates of the light source.
+         * @param point The specific surface coordinates being tested for illumination.
+         * @param pointNormal The direction the surface is facing, used to offset the testing ray.
+         * @param model The full 3D scene data.
+         * @return A fraction between 0.0 and 1.0 representing how completely the light is blocked.
          */
         float isPointInShadow(glm::vec3 lightLocation, glm::vec3 point, glm::vec3 pointNormal, const Model& model) const;
 
-
-
         /**
-         * @brief Calculates the color contribution from reflected light by bouncing the incident ray across the surface normal and continuing the ray tracing process
-         *
-         * @param incidentRayDirection The normalized direction vector of the incoming ray
-         * @param intersectionPoint The point on the surface where the reflection occurs
-         * @param intersectionNormal The surface normal at the point of reflection
-         * @param model The scene model containing all geometry
-         * @param skyBoxImageSphereTexture The background environment map
-         * @param depthLevel The current recursion depth
-         * @return A glm::vec3 representing the RGB color of the reflected environment
+         * @brief Calculates the color seen on a shiny surface by bouncing the light ray off it and seeing what object it hits next.
+         * 
+         * @param incidentRayDirection The trajectory of the light ray before hitting the surface.
+         * @param intersectionPoint The exact 3D coordinates where the ray hit the surface.
+         * @param intersectionNormal The direction the surface is facing.
+         * @param model The full 3D scene data.
+         * @param skyBoxImageSphereTexture The background panoramic image.
+         * @param depthLevel The current tracking depth of the bouncing ray.
+         * @return The RGB color retrieved from the bounced ray.
          */
         glm::vec3 calcReflectedLight(glm::vec3 incidentRayDirection,
                                      glm::vec3 intersectionPoint, 
@@ -148,18 +159,17 @@ class RayTracerWorld {
 
         
         /**
-         * @brief Calculates the color contribution from light transmitting (refracting) through a transparent material
-         * Falls back to computing reflected light if the refraction results in total internal reflection
-         *
-         * @param incidentRayDirection The normalized direction vector of the incoming ray
-         * @param intersectionPoint The exact point where the ray enters or exits the material
-         * @param intersectionNormal The surface normal at the intersection point
-         * @param intersectionFromOutsideOfSphere A flag indicating if the ray is entering the sphere (true) or exiting it (false)
-         * @param refractiveIndexIntersectedSphere The index of refraction for the intersected material
-         * @param model The scene model containing all geometry
-         * @param skyBoxImageSphereTexture The background environment map
-         * @param depthLevel The current recursion depth
-         * @return A glm::vec3 representing the RGB color of the transmitted light
+         * @brief Calculates the distorted colors seen through clear objects by bending the light ray as it passes through them.
+         * 
+         * @param incidentRayDirection The trajectory of the light ray before hitting the clear object.
+         * @param intersectionPoint The exact 3D coordinates where the ray entered or exited the object.
+         * @param intersectionNormal The direction the surface is facing.
+         * @param intersectionFromOutsideOfSphere True if the ray is entering the object, false if it is exiting.
+         * @param refractiveIndexIntersectedSphere The material density determining how the light bends.
+         * @param model The full 3D scene data.
+         * @param skyBoxImageSphereTexture The background panoramic image.
+         * @param depthLevel The current tracking depth of the passing ray.
+         * @return The RGB color retrieved from the bent ray.
          */
         glm::vec3 calcTransmissionLight(glm::vec3 incidentRayDirection, 
                                         glm::vec3 intersectionPoint, 
@@ -182,15 +192,15 @@ class RayTracerWorld {
             std::unique_ptr<SphereTexture> skyBoxImageSphereTexture;
             
             /**
-             * @brief Performs recursive ray tracing to determine the color of a ray intersecting with the scene
-             * Evaluates direct lighting, shadows, reflection, and transmission
-             *
-             * @param incidentRayOrigin The starting point of the ray in 3D space
-             * @param incidentRayDirection The normalized direction vector of the ray
-             * @param model The scene model containing spheres, materials, and lights
-             * @param skyBoxImageSphereTexture The background texture used when a ray misses all geometry
-             * @param depthLevel The current recursion depth of the ray
-             * @return A glm::vec3 representing the accumulated RGB color for this ray path
+             * @brief The core rendering loop that shoots a single ray into the scene 
+             *        and calculates its color based on direct light, shadows, reflections, and transparency.
+             * 
+             * @param incidentRayOrigin The starting 3D coordinates of the ray.
+             * @param incidentRayDirection The trajectory of the ray.
+             * @param model The full 3D scene data.
+             * @param skyBoxImageSphereTexture The background panoramic image.
+             * @param depthLevel The current tracking depth of the bouncing ray.
+             * @return The final calculated RGB color for the ray.
              */
             glm::vec3 rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 incidentRayDirection, const Model& model, 
                 const SphereTexture& skyBoxImageSphereTexture, int depthLevel) const;

@@ -330,7 +330,7 @@ void RayTracerWorld::setSoftShadowSamples(int softShadowSamples) {
 }
 
 void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
-    params.setExercise(EngineMode::RAY_TRACING, static_cast<int>(exercise));
+    params.setRtExercise(static_cast<int>(exercise));
 }
 
 void RayTracerWorld::setAperatureRadius(float aperatureRadius) {

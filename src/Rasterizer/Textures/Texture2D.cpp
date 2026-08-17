@@ -8,6 +8,7 @@ Texture2D::Texture2D(const std::string& filepath) {
     SDL_Surface* loadedTextureSurface = SDL_LoadBMP(filepath.c_str());
     if (!loadedTextureSurface) return;
 
+    // Force the image decoder to convert the loaded image into a standard 32-bit ARGB pixel format
     SDL_Surface* convertedTextureSurface = SDL_ConvertSurfaceFormat(loadedTextureSurface, SDL_PIXELFORMAT_ARGB8888, 0);
     SDL_FreeSurface(loadedTextureSurface);
     
@@ -21,6 +22,7 @@ Texture2D::Texture2D(const std::string& filepath) {
     uint32_t* pixels = static_cast<uint32_t*>(convertedTextureSurface->pixels);
     int pitch = convertedTextureSurface->pitch / 4;
 
+    // Loop through the image and divide the 0-255 color values into the 0.0-1.0 range used by the engine
     for (int y = 0; y < baseLevel.height; y++) {
         for (int x = 0; x < baseLevel.width; x++) {
             uint32_t argb = pixels[y * pitch + x];
@@ -28,6 +30,7 @@ Texture2D::Texture2D(const std::string& filepath) {
             float g = static_cast<float>((argb >> 8) & 0xFF) / 255.0f;
             float b = static_cast<float>(argb & 0xFF) / 255.0f;
             
+            // Flip the Y-axis to match standard graphics mapping coordinates
             int wrapY = baseLevel.height - 1 - y;
             baseLevel.texData[wrapY * baseLevel.width + x] = glm::vec3(r, g, b);
         }
@@ -35,7 +38,7 @@ Texture2D::Texture2D(const std::string& filepath) {
     SDL_FreeSurface(convertedTextureSurface);
     mipmaps.push_back(baseLevel);
 
-    // Generate downsampled mipmaps
+    // Generate the mipmap chain by repeatedly dividing the image dimensions in half and averaging 4 pixels into 1
     while (mipmaps.back().width > 1 || mipmaps.back().height > 1) {
         const MipLevel& prev = mipmaps.back();
         MipLevel next;

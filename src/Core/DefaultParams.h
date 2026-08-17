@@ -2,6 +2,11 @@
 #include <string>
 #include <glm/glm.hpp>
 
+/**
+ * @brief Contains all the hardcoded default numbers used by the engine when no 
+ *        user save data is found, including screen size, camera start positions, 
+ *        and lighting multipliers.
+ */
 namespace DefaultParams {
     
     constexpr int IMAGE_WIDTH = 600;
@@ -25,16 +30,10 @@ namespace DefaultParams {
     // --- Rasterizer default model ---
     inline const std::string RAST_MODEL_FILE_NAME = "RAST_Models/models_with_textures/sheep.obj";
 
-    constexpr float INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER = 5.0f;
-    constexpr float CAMERA_MAX_VERTICAL_ANGLE = 60.0f;
-
-    constexpr float CAMERA_RADIUS = INITIAL_CAMERA_DISTANCE_FROM_AXIS_CENTER;
-    inline const glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, CAMERA_RADIUS);
+    inline const glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
     inline const glm::vec3 cameraLookAtCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     inline const glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
     
-    constexpr float CAMERA_ANGLE_HORIZONTAL = 270.0f;
-    constexpr float CAMERA_ANGLE_VERTICAL = 0.0f;
     constexpr float HORIZONTAL_FOV = 30.0f;
     constexpr float MODEL_SCALE = 1.0f;
     constexpr float PROJ_NEAR_PLANE = 1.0f;

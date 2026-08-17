@@ -4,7 +4,6 @@
 #include <glm/gtc/constants.hpp> // Access to glm::pi<float>()
 
 // We define STB_IMAGE_IMPLEMENTATION here to tell stb_image to create the implementation code.
-// This must only be done in ONE .cpp file in your entire project.
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -34,8 +33,7 @@ void SphereTexture::loadImage(const std::string& filepath) {
 glm::vec3 SphereTexture::getImagePixel(int x, int y) const {
     int index = (y * width + x) * 3;
     
-    // In C++, unsigned char ranges from 0 to 255 natively.
-    // We do not need the bitwise AND (& 0xFF) workaround you used in Java.
+    // unsigned char ranges from 0 to 255 natively.
     return glm::vec3(
         imageData[index] / 255.0f,       // Red
         imageData[index + 1] / 255.0f,   // Green
@@ -77,7 +75,6 @@ glm::vec3 SphereTexture::sampleDirectionFromMiddle(const glm::vec3& direction) c
         glm::vec3 c2 = getImagePixel(x0, y1);
         glm::vec3 c3 = getImagePixel(x1, y1);
 
-        // GLM operator overloading makes this math incredibly clean compared to Java
         return c0 * wx0 + c1 * wx1 + c2 * wx2 + c3 * wx3;
     } else {
         // No interpolation, sample the nearest pixel
@@ -88,7 +85,7 @@ glm::vec3 SphereTexture::sampleDirectionFromMiddle(const glm::vec3& direction) c
 }
 
 
-// Move Constructor
+// Constructor
 SphereTexture::SphereTexture(SphereTexture&& other) noexcept 
     : width(other.width), 
       height(other.height), 
@@ -102,7 +99,7 @@ SphereTexture::SphereTexture(SphereTexture&& other) noexcept
     other.channels = 0;
 }
 
-// Move Assignment Operator
+// Assignment Operator
 SphereTexture& SphereTexture::operator=(SphereTexture&& other) noexcept {
     if (this != &other) {
         if (imageData) {

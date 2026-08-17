@@ -4,7 +4,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "./Scene/Model.h"
+#include "Model.h"
 #include "../Utilities/ParserUtils.h"
 
 // Default constructor
@@ -19,12 +19,12 @@ Model::Model(const std::string& modelFilename) : fovXdegree(0.0f) {
 
     std::string line;
     while (std::getline(file, line)) {
-        // --- FIX 3: Destroy invisible Windows carriage returns (\r) ---
+        // Strip invisible Windows carriage returns to prevent string mismatches
         if (!line.empty() && line.back() == '\r') {
             line.pop_back();
         }
 
-        // Skip empty lines
+        // Ignore completely blank lines or lines with only whitespace
         if (line.empty() || line.find_first_not_of(" \t\r\n") == std::string::npos) {
             continue;
         }
@@ -34,6 +34,7 @@ Model::Model(const std::string& modelFilename) : fovXdegree(0.0f) {
             continue;
         }
 
+        // Isolate the category label at the start of the line to determine how to parse the data
         std::string lineType = line.substr(0, colonPos);
         std::istringstream lineScanner(line);
 
@@ -74,21 +75,22 @@ Model::Model(const std::string& modelFilename) : fovXdegree(0.0f) {
     }
     file.close();
 
-    // Get the exact directory where the .model file lives
+    // Determine the folder directory where the main scene file is located
     std::filesystem::path modelPath(modelFilename);
     std::filesystem::path modelDirectory = modelPath.parent_path();
 
+    // Fallback to a default directory if the path provided was strictly a filename
     if (modelDirectory.empty()) {
         modelDirectory = "Models";
     }
 
-    // --- FIX 2: Resolve Skybox path relative to the model file ---
+    // Force the skybox image to be loaded from the exact same folder as the scene file
     if (!skyBoxImageFileName.empty()) {
         std::filesystem::path skyPath(skyBoxImageFileName);
         skyBoxImageFileName = (modelDirectory / skyPath.filename()).string();
     }
 
-    // --- FIX 1: Only ONE loop to load textures, using the corrected paths ---
+    // Load every requested texture into memory, forcing the file paths to match the scene file's directory
     for (const std::string& rawTexturePath : sphereTextureFileNames) {
         try {
             std::filesystem::path texPath(rawTexturePath);
