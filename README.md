@@ -8,8 +8,8 @@ This project is a C++ port of a basic Java university course project, built from
 
 | | Ray Tracing | Rasterization |
 | :--- | :---: | :---: |
-| **Clean Render** | <img src="./assets/images/RayTracing-Example.jpg"> | <img src="./assets/images/Rasterization-Example.jpg"> |
-| **UI Controls** | <img src="./assets/images/RayTracing-Controls.jpg"> | <img src="./assets/images/Rasterization-Controls.jpg"> |
+| **Clean Render** | ![Ray Tracing Render](assets/images/RayTracing-Example.jpg) | ![Rasterization Render](assets/images/Rasterization-Example.jpg) |
+| **UI Controls** | ![Ray Tracing Controls](assets/images/RayTracing-Controls.jpg) | ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
 
 ## Engine Architecture & Pipelines
 
