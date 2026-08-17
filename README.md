@@ -1,15 +1,29 @@
 # Custom 3D Graphics Engine (Java to C++ Port)
 
+
 ## A CPU-based 3D graphics engine featuring both a Ray Tracer and a Polygon Rasterizer, built from scratch and heavily expanded.
 
 This project is a C++ port of a basic Java university course project, built from scratch and heavily expanded. It serves as a comprehensive implementation of the core computer graphics pipeline, executing all mathematical transformations, geometric clipping, and pixel shading directly on the CPU without relying on hardware-accelerated APIs like OpenGL or DirectX. The dual-engine architecture demonstrates two fundamentally different approaches to 3D rendering: a recursive ray tracer focused on realistic light transport—handling reflections, refractions, and stochastic sampling—and a real-time software rasterizer that strictly follows the classic vertex-to-fragment pipeline.
 
+## Table of Contents
+* [Showcase](#showcase)
+* [Engine Architecture & Pipelines](#engine-architecture--pipelines)
+  * [The Ray Tracing Pipeline](#1-the-ray-tracing-pipeline)
+  * [The Rasterization Pipeline](#2-the-rasterization-pipeline)
+* [Engine Upgrades](#engine-upgrades)
+* [Architecture & Dependencies](#architecture--dependencies)
+* [Project Layout](#project-layout)
+* [Building the Project](#building-the-project)
+* [UI Controls](#ui-controls)
+
+
 ## Showcase
 
 | | Ray Tracing | Rasterization |
-| :--- | :---: | :---: |
+| :---: | :---: | :---: |
 | **Clean Render** | ![Ray Tracing Render](assets/images/RayTracing-Example.jpg) | ![Rasterization Render](assets/images/Rasterization-Example.jpg) |
 | **UI Controls** | ![Ray Tracing Controls](assets/images/RayTracing-Controls.jpg) | ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
+
 
 ## Engine Architecture & Pipelines
 
@@ -64,6 +78,7 @@ flowchart TD
     G --> H([Write to Framebuffer])
 ```
 
+
 ## Engine Upgrades
 
 The port from Java to C++ served as the foundation for implementing advanced graphics concepts that go far beyond the scope of the original basic engine. The following features were explicitly engineered to upgrade both pipelines:
@@ -84,6 +99,7 @@ The port from Java to C++ served as the foundation for implementing advanced gra
 * **Mipmapping:** Integrated Level of Detail (LOD) texture filtering, utilizing screen-space coordinate derivatives to sample appropriately downscaled textures.
 * **Z-Buffer with Transparency:** Upgraded the depth-buffering system to accurately track occlusion while handling transparent pixel sorting.
 
+
 ## Dependencies
 
 By bypassing hardware-accelerated graphics APIs (like OpenGL or DirectX), this engine executes the entire rendering pipeline directly on the CPU. It relies on a minimal set of external C++ libraries for windowing, math, and asset parsing:
@@ -97,9 +113,14 @@ By bypassing hardware-accelerated graphics APIs (like OpenGL or DirectX), this e
 * **stb_image:** Decoding image files (JPG, PNG, BMP) for texture mapping.
 * **nlohmann/json:** Serializing and saving user UI preferences.
 
+
 ## Building the Project
 
-This project uses CMake for cross-platform build generation.
+* **Option 1: Pre-Built Executable**
+[Download the pre-built Windows executable from the Releases tab](https://github.com/guyshargo/Graphics-Engine/releases).
+
+* **Option 2: Build from Source**
+This project uses CMake for cross-platform build generation. Because all external libraries are fetched automatically, the build process is entirely self-contained.
 
 ### Prerequisites
 * CMake (v3.15 or higher)
@@ -109,10 +130,10 @@ This project uses CMake for cross-platform build generation.
 ### Build Steps
 1. Clone the repository:
 ```bash
-    git clone [https://github.com/guyshargo/Graphics-Engine.git](https://github.com/guyshargo/Graphics-Engine.git)
+    git clone https://github.com/guyshargo/Graphics-Engine.git
     cd Graphics-Engine
 ```
-2. Generate build files with CMake:
+2. Generate build files with CMake (this step will automatically download SDL2, GLM, and ImGui):
 ```bash
     mkdir build
     cd build
@@ -123,9 +144,10 @@ This project uses CMake for cross-platform build generation.
     cmake --build . --config Release
 ```
 
+
 ## UI Controls
-* Mouse & UI: Use the ImGui panel to switch between the Ray Tracer and Rasterizer, load .obj or .model files, and adjust rendering parameters in real-time.
-* Camera (Rasterizer Mode):
+* **Mouse & UI:** Use the ImGui panel to switch between the Ray Tracer and Rasterizer, load .obj or .model files, and adjust rendering parameters in real-time.
+* **Camera (Rasterizer Mode):**
     * Left Click + Drag: Orbit the camera.
     * Right Click + Drag: Pan the camera horizontally and vertically.
     * Scroll Wheel: Zoom in and out.
