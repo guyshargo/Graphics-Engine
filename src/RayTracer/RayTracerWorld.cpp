@@ -152,7 +152,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     returnedColor += intersectedSphereMaterial.kDirect * directLighting;
 
     // adding reflected light if current pixel has reflection value
-    if (intersectedSphereMaterial.kReflection > 0.0f && params.getRtExercise() >= RayTracingExerciseEnum::EX_7_Reflection) {
+    if (intersectedSphereMaterial.kReflection > 0.0f && params.getDisplayType(EngineMode::RAY_TRACING) >= static_cast<int>(RayTracingDisplayTypeEnum::EX_7_Reflection)) {
         glm::vec3 reflectedLight = calcReflectedLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             model, skyBoxImageSphereTexture, depthLevel);
 
@@ -160,7 +160,7 @@ glm::vec3 RayTracerWorld::rayTracing(glm::vec3 incidentRayOrigin, glm::vec3 inci
     }
 
     // adding transmitted light if current pixel has transmission value
-    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getRtExercise() >= RayTracingExerciseEnum::EX_8_Transparency) {
+    if (intersectedSphereMaterial.kTransmission > 0.0f && params.getDisplayType(EngineMode::RAY_TRACING) >= static_cast<int>(RayTracingDisplayTypeEnum::EX_8_Transparency)) {
         glm::vec3 transmittedLight = calcTransmissionLight(incidentRayDirection, intersectionPoint, intersectionNormal,
             intersectionFromOutsideOfSphere, intersectedSphereMaterial.refractiveIndex, model, skyBoxImageSphereTexture, depthLevel);
 
@@ -329,8 +329,8 @@ void RayTracerWorld::setSoftShadowSamples(int softShadowSamples) {
     params.setSoftShadowSamples(softShadowSamples);
 }
 
-void RayTracerWorld::setExercise(RayTracingExerciseEnum exercise) {
-    params.setRtExercise(static_cast<int>(exercise));
+void RayTracerWorld::setDisplayType(RayTracingDisplayTypeEnum displayType) {
+    params.setDisplayType(EngineMode::RAY_TRACING, static_cast<int>(displayType));
 }
 
 void RayTracerWorld::setAperatureRadius(float aperatureRadius) {

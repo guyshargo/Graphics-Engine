@@ -9,7 +9,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "./Data/PipelineData.h"
-#include "ExerciseEnum.h"
 #include "OBJLoader.h"
 #include "./Textures/Texture2D.h"
 

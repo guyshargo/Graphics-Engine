@@ -10,12 +10,10 @@ enum class EngineMode {
     RASTERIZATION
 };
 
-enum class RayTracingExerciseEnum {
+enum class RayTracingDisplayTypeEnum {
     EX_2_Rays_calculation,
     EX_3_1_Intersection_One_sphere,
-    EX_3_2_Intersection_One_sphere_with_color,
     EX_3_3_Intersection_List_of_spheres,
-    EX_3_4_Intersection_Finding_the_nearest_sphere,
     EX_4_1_Lighting_Diffusive,
     EX_4_2_Lighting_Ambient,
     EX_4_3_Lighting_Specular,
@@ -24,7 +22,7 @@ enum class RayTracingExerciseEnum {
     EX_8_Transparency
 };
 
-enum class DisplayTypeEnum {
+enum class RasterizationDisplayTypeEnum {
     FACE_EDGES, 
     FACE_COLOR, 
     INTERPOlATED_VERTEX_COLOR, 

@@ -74,11 +74,11 @@ class RayTracerWorld {
         void setFocalDistance(float focalDistance);
                 
         /**
-         * @brief Sets the current ray tracing exercise mode, which controls which engine features are active
+         * @brief Sets the current ray tracing display type, which controls which features are visible in the scene
          *
-         * @param exercise The specific RayTracingExerciseEnum value to activate
+         * @param displayType The specific RayTracingDisplayTypeEnum value to activate
          */
-        void setExercise(RayTracingExerciseEnum exercise);
+        void setDisplayType(RayTracingDisplayTypeEnum displayType);
 
         
         /**

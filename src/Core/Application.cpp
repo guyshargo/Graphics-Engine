@@ -77,13 +77,13 @@ bool Application::Init() {
     m_RayTracerWorld.setSoftShadowSamples(m_Params.getSoftShadowSamples());
     m_RayTracerWorld.setAperatureRadius(m_Params.getAperatureRadius());
     m_RayTracerWorld.setFocalDistance(m_Params.getFocalDistance());
-    m_RayTracerWorld.setExercise(m_Params.getRtExercise());
-    m_SelectedRtExercise = static_cast<int>(m_Params.getRtExercise());
+    m_RayTracerWorld.setDisplayType(static_cast<RayTracingDisplayTypeEnum>(m_Params.getDisplayType(EngineMode::RAY_TRACING)));
+    m_SelectedRtDisplay = static_cast<int>(m_Params.getDisplayType(EngineMode::RAY_TRACING));
 
     // Inject loaded parameters directly into the Rasterizer
     m_IsRastLoaded = m_RasterizerWorld.load(m_Params.getRastModelFileName());
     m_RasterizerWorld.projectionType = m_Params.getProjectionType();
-    m_RasterizerWorld.displayType = m_Params.getDisplayType();
+    m_RasterizerWorld.displayType = (static_cast<RasterizationDisplayTypeEnum>(m_Params.getDisplayType(EngineMode::RASTERIZATION)));
     m_RasterizerWorld.displayNormals = m_Params.isDisplayNormals();
     
     // Apply hardcoded camera defaults for the Rasterizer
@@ -200,14 +200,14 @@ void Application::RenderUI() {
         }
         ImGui::TextWrapped("Model: %s", m_Params.getRtModelFileName().c_str());
 
-        std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RayTracingExerciseEnum>(m_SelectedRtExercise)));
-        if (ImGui::BeginCombo("RT Exercise", currentExerciseName.c_str())) {
-            for (const auto& val : magic_enum::enum_values<RayTracingExerciseEnum>()) {
-                bool isSelected = (m_SelectedRtExercise == static_cast<int>(val));
+        std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RayTracingDisplayTypeEnum>(m_SelectedRtDisplay)));
+        if (ImGui::BeginCombo("Display Type:", currentExerciseName.c_str())) {
+            for (const auto& val : magic_enum::enum_values<RayTracingDisplayTypeEnum>()) {
+                bool isSelected = (m_SelectedRtDisplay == static_cast<int>(val));
                 if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
-                    m_SelectedRtExercise = static_cast<int>(val);
-                    m_Params.setRtExercise(m_SelectedRtExercise);
-                    m_RayTracerWorld.setExercise(m_Params.getRtExercise());
+                    m_SelectedRtDisplay = static_cast<int>(val);
+                    m_Params.setDisplayType(EngineMode::RAY_TRACING, m_SelectedRtDisplay);
+                    m_RayTracerWorld.setDisplayType(static_cast<RayTracingDisplayTypeEnum>(m_SelectedRtDisplay));
                     m_UpdateWindowFlag = true;
                 }
             }
@@ -286,11 +286,11 @@ void Application::RenderUI() {
 
         std::string currentDisplayTypeName = std::string(magic_enum::enum_name(m_RasterizerWorld.displayType));
         if (ImGui::BeginCombo("Display Type", currentDisplayTypeName.c_str())) {
-            for (const auto& val : magic_enum::enum_values<DisplayTypeEnum>()) {
+            for (const auto& val : magic_enum::enum_values<RasterizationDisplayTypeEnum>()) {
                 bool isSelected = (m_RasterizerWorld.displayType == val);
                 if (ImGui::Selectable(std::string(magic_enum::enum_name(val)).c_str(), isSelected)) {
                     m_RasterizerWorld.displayType = val;
-                    m_Params.setDisplayType(val);
+                    m_Params.setDisplayType(EngineMode::RASTERIZATION, static_cast<int>(val));
                     m_UpdateWindowFlag = true;
                 }
             }

@@ -190,7 +190,7 @@ void ObjectModel::vertexProcessing(const PlotPixelCallback& plotPixel, VertexDat
     vertex.normalEyeCoordinates = glm::normalize(normalMatrix * vertex.normalObjectCoordinates);
 
     // calculate lighting for a vertex for 'gourard shading'
-    if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
+    if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_GOURARD) {
         float vertexLighting = LightingUtils::lightingEquation(vertex.pointEyeCoordinates, vertex.normalEyeCoordinates, lightPositionEyeCoordinates, 
                                                 rasterizerWorld -> lighting_Diffuse, rasterizerWorld -> lighting_Specular, 
                                                 rasterizerWorld -> lighting_Ambient, rasterizerWorld -> lighting_sHininess);
@@ -240,7 +240,7 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
     }
     
     // lines rasterization: draw white lines between polygon vertices
-    if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_EDGES) {
+    if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::FACE_EDGES) {
         DrawUtils::drawLineBresenham(plotPixel, vertex1.pointWindowCoordinates, vertex2.pointWindowCoordinates, glm::vec3(1.0f));
         DrawUtils::drawLineBresenham(plotPixel, vertex2.pointWindowCoordinates, vertex3.pointWindowCoordinates, glm::vec3(1.0f));
         DrawUtils::drawLineBresenham(plotPixel, vertex3.pointWindowCoordinates, vertex1.pointWindowCoordinates, glm::vec3(1.0f));
@@ -315,20 +315,20 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
                         FragmentData fragmentData;
                         fragmentData.levelOfDetail = faceLevelOfDetail;
 
-                        if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_COLOR) {
+                        if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::FACE_COLOR) {
                             // color all pixels in face color
                             fragmentData.pixelColor = faceColor;
                         
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::INTERPOlATED_VERTEX_COLOR) {
+                        } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::INTERPOlATED_VERTEX_COLOR) {
                             // calculating interpolated color for pixel inside polygon
                             glm::vec3 interpolatedColor = bc.interpolate(vertex1.color, vertex2.color, vertex3.color);
                             fragmentData.pixelColor = interpolatedColor;
 
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_FLAT) {
+                        } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_FLAT) {
                             // pixel light intensity for all pixels in current polygon
                             fragmentData.pixelIntensity0to1 = polygonLighting;
 
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
+                        } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_GOURARD) {
                             // pixel light intensity with interpolation with vertices
                             float interpolatedLight = bc.interpolate(vertex1.lightingIntensity0to1,
                                                                      vertex2.lightingIntensity0to1, 
@@ -336,7 +336,7 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
 
                             fragmentData.pixelIntensity0to1 = interpolatedLight;
 
-                        } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
+                        } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_PHONG) {
                             // interpolation of point and normal in eye coordinates
                             glm::vec3 interpolatedEyePoint = bc.interpolate(vertex1.pointEyeCoordinates, 
                                                                             vertex2.pointEyeCoordinates,
@@ -349,7 +349,9 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
                             fragmentData.pointEyeCoordinates = interpolatedEyePoint;
                             fragmentData.normalEyeCoordinates = glm::normalize(interpolatedEyeNormal);
                         
-                        } else if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE || rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+                        } else if (rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE 
+                                || rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE_LIGHTING) {
+
                             if (!objectHasTexture()) {
                                 plotPixel(x, y, glm::vec3(1.0f, 0.0f, 1.0f));
                                 rasterizerWorld->zBuffer[zBufferIndex] = zDepth;
@@ -358,7 +360,7 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
                             
                             fragmentData.textureCoordinates = bc.interpolate(vertex1.textureCoordinates, vertex2.textureCoordinates, vertex3.textureCoordinates);
                             
-                            if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+                            if (rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE_LIGHTING) {
                                 fragmentData.pointEyeCoordinates = bc.interpolate(vertex1.pointEyeCoordinates, vertex2.pointEyeCoordinates, vertex3.pointEyeCoordinates);
                                 fragmentData.normalEyeCoordinates = bc.interpolate(vertex1.normalEyeCoordinates, vertex2.normalEyeCoordinates, vertex3.normalEyeCoordinates);
                             }
@@ -380,21 +382,21 @@ void ObjectModel::rasterization(const PlotPixelCallback& plotPixel, const Vertex
 
 glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
     
-    if (rasterizerWorld -> displayType == DisplayTypeEnum::FACE_COLOR) {
+    if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::FACE_COLOR) {
         return fragmentData.pixelColor;
 
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::INTERPOlATED_VERTEX_COLOR) {
+    } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::INTERPOlATED_VERTEX_COLOR) {
         return fragmentData.pixelColor;
 
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_FLAT) {
+    } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_FLAT) {
         // return vector3f of gray scale lighting for polygon
         return glm::vec3(fragmentData.pixelIntensity0to1);
 
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_GOURARD) {
+    } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_GOURARD) {
         // return vector3f of gray scale lighting for polygon
         return glm::vec3(fragmentData.pixelIntensity0to1);
 
-    } else if (rasterizerWorld -> displayType == DisplayTypeEnum::LIGHTING_PHONG) {
+    } else if (rasterizerWorld -> displayType == RasterizationDisplayTypeEnum::LIGHTING_PHONG) {
         // calculate light for every pixel with its unique location and normal
         float pixelLighting = LightingUtils::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                         lightPositionEyeCoordinates,
@@ -405,15 +407,15 @@ glm::vec3 ObjectModel::fragmentProcessing(const FragmentData& fragmentData) {
 
         return glm::vec3(pixelLighting);
 
-    } else if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE || 
-               rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+    } else if (rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE || 
+               rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE_LIGHTING) {
 
         // Fallback to magenta color if no texture detected
         if (!objectHasTexture()) return glm::vec3(1.0f, 0.0f, 1.0f);
 
         glm::vec3 finalTexColor = texture->sample(fragmentData.levelOfDetail, fragmentData.textureCoordinates);
 
-        if (rasterizerWorld->displayType == DisplayTypeEnum::TEXTURE_LIGHTING) {
+        if (rasterizerWorld->displayType == RasterizationDisplayTypeEnum::TEXTURE_LIGHTING) {
             float pixelLighting = LightingUtils::lightingEquation(fragmentData.pointEyeCoordinates, fragmentData.normalEyeCoordinates,
                                                     lightPositionEyeCoordinates,
                                                     rasterizerWorld->lighting_Diffuse, rasterizerWorld->lighting_Specular,

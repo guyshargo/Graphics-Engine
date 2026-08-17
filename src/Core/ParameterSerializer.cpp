@@ -33,11 +33,11 @@ bool ParameterSerializer::Load(SavedParams& params, const std::string& filename)
         params.setSoftShadowSamples(rtJson.value("softShadowSamples", DefaultParams::SOFT_SHADOW_SAMPLES));
         params.setAperatureRadius(rtJson.value("aperatureRadius", DefaultParams::APERATURE_RADIUS));
         params.setFocalDistance(rtJson.value("focalDistance", DefaultParams::FOCAL_DISTANCE));
-        params.setRtExercise(rtJson.value("rtExercise", 0));
+        params.setDisplayType(EngineMode::RAY_TRACING, rtJson.value("rtDisplayType", static_cast<int>(RayTracingDisplayTypeEnum::EX_8_Transparency)));
 
         params.setModelFileName(EngineMode::RASTERIZATION, rastJson.value("rastModelFileName", DefaultParams::RAST_MODEL_FILE_NAME));
         params.setProjectionType(static_cast<ProjectionTypeEnum>(rastJson.value("projectionType", static_cast<int>(ProjectionTypeEnum::ORTHOGRAPHIC))));
-        params.setDisplayType(static_cast<DisplayTypeEnum>(rastJson.value("displayType", static_cast<int>(DisplayTypeEnum::FACE_EDGES))));
+        params.setDisplayType(EngineMode::RASTERIZATION, rastJson.value("rastDisplayType", static_cast<int>(RasterizationDisplayTypeEnum::FACE_EDGES)));
         params.setDisplayNormals(rastJson.value("displayNormals", false));
         
         return true;
@@ -58,12 +58,12 @@ bool ParameterSerializer::Save(const SavedParams& params, const std::string& fil
     j["RayTracer"]["softShadowSamples"] = params.getSoftShadowSamples();
     j["RayTracer"]["aperatureRadius"] = params.getAperatureRadius();
     j["RayTracer"]["focalDistance"] = params.getFocalDistance();
-    j["RayTracer"]["rtExercise"] = static_cast<int>(params.getRtExercise());
+    j["RayTracer"]["rtDisplayType"] = params.getDisplayType(EngineMode::RAY_TRACING);
 
     // Package Rasterizer settings under an explicit JSON group
     j["Rasterizer"]["rastModelFileName"] = params.getRastModelFileName();
     j["Rasterizer"]["projectionType"] = static_cast<int>(params.getProjectionType());
-    j["Rasterizer"]["displayType"] = static_cast<int>(params.getDisplayType());
+    j["Rasterizer"]["rastDisplayType"] = static_cast<int>(params.getDisplayType(EngineMode::RASTERIZATION));
     j["Rasterizer"]["displayNormals"] = params.isDisplayNormals();
 
     std::string fullPath = PathResolver::ResolvePath(filename);

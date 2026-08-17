@@ -7,7 +7,7 @@
 #include "RayTracerWorld.h"
 #include "RasterizerWorld.h"
 #include "SavedParams.h"
-#include "ExerciseEnum.h"
+#include "DisplayEnum.h"
 
 /**
  * @brief Manages the entire application lifecycle, including window creation, user interface, 
@@ -87,5 +87,5 @@ private:
     
     bool m_IsRtLoaded = false;
     bool m_IsRastLoaded = false;
-    int m_SelectedRtExercise = 0;
+    int m_SelectedRtDisplay = 0;
 };

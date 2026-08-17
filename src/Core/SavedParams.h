@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "ExerciseEnum.h"
+#include "DisplayEnum.h"
 #include "DefaultParams.h"
 
 /**
@@ -17,11 +17,11 @@ private:
     int softShadowSamples = DefaultParams::SOFT_SHADOW_SAMPLES;
     float aperatureRadius = DefaultParams::APERATURE_RADIUS;
     float focalDistance = DefaultParams::FOCAL_DISTANCE;
-    RayTracingExerciseEnum rtExercise = static_cast<RayTracingExerciseEnum>(0);
+    RayTracingDisplayTypeEnum rtDisplayType = RayTracingDisplayTypeEnum::EX_8_Transparency;
 
     // Rasterizer
     ProjectionTypeEnum projectionType = ProjectionTypeEnum::ORTHOGRAPHIC;
-    DisplayTypeEnum displayType = DisplayTypeEnum::FACE_EDGES;
+    RasterizationDisplayTypeEnum rastDisplayType = RasterizationDisplayTypeEnum::FACE_EDGES;
     bool displayNormals = false;
 
 public:
@@ -35,24 +35,34 @@ public:
     int getSoftShadowSamples() const { return softShadowSamples; }
     float getAperatureRadius() const { return aperatureRadius; }
     float getFocalDistance() const { return focalDistance; }
-    RayTracingExerciseEnum getRtExercise() const { return rtExercise; }
+
+    int getDisplayType(EngineMode currentMode) const { 
+        if (currentMode == EngineMode::RAY_TRACING) {
+            return static_cast<int>(rtDisplayType);
+        } else {
+            return static_cast<int>(rastDisplayType);
+        }
+    }
 
     ProjectionTypeEnum getProjectionType() const { return projectionType; }
-    DisplayTypeEnum getDisplayType() const { return displayType; }
+    RasterizationDisplayTypeEnum getRastDisplayType() const { return rastDisplayType; }
     bool isDisplayNormals() const { return displayNormals; }
 
     // --- Setters ---
+    void setDisplayType(EngineMode currentMode, int displayTypeValue) {
+        if (currentMode == EngineMode::RAY_TRACING) {
+            rtDisplayType = static_cast<RayTracingDisplayTypeEnum>(displayTypeValue);
+        } else {
+            rastDisplayType = static_cast<RasterizationDisplayTypeEnum>(displayTypeValue);
+        }
+    }
+
     void setProjectionType(ProjectionTypeEnum type) { projectionType = type; }
-    void setDisplayType(DisplayTypeEnum type) { displayType = type; }
     void setDisplayNormals(bool display) { displayNormals = display; }
 
     void setModelFileName(EngineMode currentMode, const std::string& fileName) {
         if (currentMode == EngineMode::RASTERIZATION) rastModelFileName = fileName;
         else rtModelFileName = fileName;
-    }
-
-    void setRtExercise(int exerciseValue) {
-        rtExercise = static_cast<RayTracingExerciseEnum>(exerciseValue);
     }
 
     void setDepthOfRayTracing(int depth) { depthOfRayTracing = depth; }

@@ -6,7 +6,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 
-#include "ExerciseEnum.h"
+#include "DisplayEnum.h"
 #include "./Scene/ObjectModel.h"
 
 /**
@@ -57,7 +57,7 @@ public:
 
     // display options
     ProjectionTypeEnum projectionType;
-    DisplayTypeEnum displayType;
+    RasterizationDisplayTypeEnum displayType;
     bool displayNormals = false;
 
     // camera location parameters
@@ -72,10 +72,10 @@ public:
     glm::vec3 objectScale{1.0f, 1.0f, 1.0f};
 
     // lighting parameters
-    float lighting_Diffuse;
-    float lighting_Specular;
-    float lighting_Ambient;
-    float lighting_sHininess;
+    float lighting_Diffuse = 0.0f;
+    float lighting_Specular = 0.0f;
+    float lighting_Ambient = 0.0f;
+    float lighting_sHininess = 0.0f;
     glm::vec3 lightPositionWorldCoordinates;
     
     // depth buffer
@@ -111,10 +111,6 @@ private:
     std::unique_ptr<ObjectModel> object1;
     
     int counter = 0;
-    
-    // growing location coordinates of object
-    float objectX;
-    float objectY;
 
     /**
      * @brief Resets the depth tracking array to the maximum possible distance, preparing the engine for a new frame.

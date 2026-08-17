@@ -146,8 +146,24 @@ This project uses CMake for cross-platform build generation. Because all externa
 
 
 ## UI Controls
-* **Mouse & UI:** Use the ImGui panel to switch between the Ray Tracer and Rasterizer, load .obj or .model files, and adjust rendering parameters in real-time.
-* **Camera (Rasterizer Mode):**
-    * Left Click + Drag: Orbit the camera.
-    * Right Click + Drag: Pan the camera horizontally and vertically.
-    * Scroll Wheel: Zoom in and out.
+
+The engine features a comprehensive ImGui overlay for real-time parameter tuning and debugging.
+
+### Global Controls
+* **Engine Switch:** Toggle instantly between the Ray Tracer and Rasterizer pipelines.
+* **File Loading:** Open native system file dialogs to load custom `.obj` (Rasterizer) or `.model` (Ray Tracer) assets.
+
+### Ray Tracer Mode
+* **Display Type:** Step through the mathematical stages of the pipeline (e.g., Rays Calculation, Rays Intersections, Texture, Reflections, Transparency).
+* **Depth of Field:** Real-time sliders to adjust the simulated Aperture Radius and Focal Distance.
+* **Sampling Parameters:** Dropdown menus to scale the processing load by adjusting Antialiasing Samples, Light Radius (for area lighting), and Soft Shadow Samples.
+
+### Rasterizer Mode
+* **Display Type:** Switch between rendering algorithms (e.g., Wireframe, Face Colors, Vertex Interpolation, Flat/Gouraud/Phong Shading, Textures).
+* **Projection:** Toggle the camera projection matrix between Perspective and Orthographic.
+* **Show Normals:** Render the calculated 3D surface normal vectors directly on the geometry.
+* **Object Transformations:** Drag controls to dynamically translate, rotate, and scale the 3D model in world space.
+* **Viewport Navigation (Mouse):**
+    * **Left Click + Drag:** Orbit the camera around the look-at target.
+    * **Right Click + Drag:** Pan the camera horizontally and vertically.
+    * **Scroll Wheel:** Dolly (Zoom) the camera forward and backward.
