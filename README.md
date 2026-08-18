@@ -22,8 +22,7 @@ This project is a C++ port of a basic Java university course project, built from
 ### Ray Tracing
 | **Texture** | **Reflection** | **Transparency** | **UI Controls** |
 | :---: | :---: | :---: | :---: |
-|![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) |
- ![Transparency](assets/images/Transparency.jpg) | ![UI Controls](assets/images/Rasterization-Controls.jpg) |
+|![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) | ![Transparency](assets/images/Transparency.jpg) | ![UI Controls](assets/images/Rasterization-Controls.jpg) |
 
 ### Rasterization
 | **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** | **UI Controls** |
