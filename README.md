@@ -20,12 +20,12 @@ This project is a C++ port of a basic Java university course project, built from
 
 ### Ray Tracing
 | **Texture** | **Reflection** | **Transparency** |
-| :---: | :---: | :---: | :---: |
+| :---: | :---: | :---: |
 |![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) | ![Transparency](assets/images/Transparency.jpg) |
 
 ### Rasterization
 | **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** |
-| :---: | :---: | :---: | :---: |
+| :---: | :---: | :---: |
 | ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) |
 
 ## Engine Architecture & Pipelines
@@ -163,7 +163,7 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
 
 | **UI Controls** |
 | :---: |
-| ![UI Controls](assets/images/Rasterization-Controls.jpg) |
+| ![UI Controls](assets/images/RayTracing-Controls.jpg) |
 
 ### Rasterizer Mode
 * **Display Type:** Switch between rendering algorithms (e.g., Wireframe, Face Colors, Vertex Interpolation, Flat/Gouraud/Phong Shading, Textures).
