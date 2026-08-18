@@ -22,13 +22,13 @@ This project is a C++ port of a basic Java university course project, built from
 ### Ray Tracing
 | **Texture** | **Reflection** | **Transparency** | **UI Controls** |
 | :---: | :---: | :---: | :---: |
-|![Texture](assets/images/Texture.jpg.jpg) | ![Reflection](assets/images/Reflection.jpg.jpg) |
-| ![Transparency](assets/images/Transparency.jpg.jpg) | ![UI Controls](assets/images/Rasterization-Controls.jpg) |
+|![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) |
+| ![Transparency](assets/images/Transparency.jpg) | ![UI Controls](assets/images/Rasterization-Controls.jpg) |
 
 ### Rasterization
-| **Wireframe (Face Edges)** | **Flat Shading** | **Texture + Lighting** | **UI Controls** |
+| **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** | **UI Controls** |
 | :---: | :---: | :---: | :---: |
-| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Flat.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) | ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
+| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) | ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
 
 
 ## Engine Architecture & Pipelines
