@@ -9,8 +9,8 @@
  */
 namespace DefaultParams {
     
-    constexpr int IMAGE_WIDTH = 600;
-    constexpr int IMAGE_HEIGHT = 600;
+    constexpr int IMAGE_WIDTH = 800;
+    constexpr int IMAGE_HEIGHT = 800;
 
     // --- Ray Tracer default model ---
     inline const std::string RT_MODEL_FILE_NAME = "RT_Models/ex_02___skybox_with_direction_labels.model";

@@ -17,6 +17,13 @@
 #include <glm/glm.hpp>
 #include <magic_enum.hpp>
 
+// Rasterization transformation rows values
+struct TransformRow {
+    const char* name;
+    glm::vec3* data;
+    float step;
+};
+
 Application::Application() 
     : m_RayTracerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT, 90.0f),
       m_RasterizerWorld(DefaultParams::IMAGE_WIDTH, DefaultParams::IMAGE_HEIGHT) {
@@ -156,10 +163,15 @@ void Application::ProcessEvents() {
 }
 
 void Application::HandleOpenFile() {
+    // Dynamically check if the folders exist right next to the .exe (Release ZIP).
+    // If not, fall back to the IDE development path.
+    std::string rastPath = std::filesystem::exists("RAST_MOodels") ? "RAST_Models" : "../../assets/RAST_Models";
+    std::string rtPath = std::filesystem::exists("RT_Models") ? "RT_Models" : "../../assets/RT_Models";
+
     // Determine the starting folder based on which engine is currently active
     std::string modelsDir = (m_CurrentMode == EngineMode::RASTERIZATION) 
-        ? std::filesystem::absolute("../../assets/RAST_Models").string() 
-        : std::filesystem::absolute("../../assets/RT_Models").string();
+        ? std::filesystem::absolute(rastPath).string() 
+        : std::filesystem::absolute(rtPath).string();
 
     std::string newPath = (m_CurrentMode == EngineMode::RASTERIZATION) 
         ? PlatformUtils::openFileChooser("obj", modelsDir)
@@ -195,10 +207,11 @@ void Application::RenderUI() {
     ImGui::Separator();
 
     if (m_CurrentMode == EngineMode::RAY_TRACING) {
-        if (ImGui::Button("Open RT Model")) {
+        if (ImGui::Button("Load Model")) {
             HandleOpenFile();
         }
-        ImGui::TextWrapped("Model: %s", m_Params.getRtModelFileName().c_str());
+        ImGui::SameLine();
+        ImGui::TextWrapped("Path: %s", m_Params.getRtModelFileName().c_str());
 
         std::string currentExerciseName = std::string(magic_enum::enum_name(static_cast<RayTracingDisplayTypeEnum>(m_SelectedRtDisplay)));
         if (ImGui::BeginCombo("Display Type:", currentExerciseName.c_str())) {
@@ -279,10 +292,11 @@ void Application::RenderUI() {
         }
     }
     else {
-        if (ImGui::Button("Open Rast Model")) {
+        if (ImGui::Button("Load Object")) {
             HandleOpenFile();
         }
-        ImGui::TextWrapped("Model: %s", m_Params.getRastModelFileName().c_str());
+        ImGui::SameLine();
+        ImGui::TextWrapped("Path: %s", m_Params.getRastModelFileName().c_str());
 
         std::string currentDisplayTypeName = std::string(magic_enum::enum_name(m_RasterizerWorld.displayType));
         if (ImGui::BeginCombo("Display Type", currentDisplayTypeName.c_str())) {
@@ -325,9 +339,48 @@ void Application::RenderUI() {
             m_RasterizerWorld.objectScale = glm::vec3(DefaultParams::MODEL_SCALE);
             m_UpdateWindowFlag = true;
         }
-        if (ImGui::DragFloat3("Position", &m_RasterizerWorld.objectPosition.x, 0.1f)) { m_UpdateWindowFlag = true; }
-        if (ImGui::DragFloat3("Rotation", &m_RasterizerWorld.objectRotation.x, 1.0f)) { m_UpdateWindowFlag = true; }
-        if (ImGui::DragFloat3("Scale", &m_RasterizerWorld.objectScale.x, 0.05f)) { m_UpdateWindowFlag = true; }
+        // Modern ImGui Table for aligned X, Y, Z headers
+        if (ImGui::BeginTable("TransformTable", 4, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame)) {
+            
+            // --- Table Headers ---
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 65.0f); 
+            ImGui::TableSetupColumn("X", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Y", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Z", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableHeadersRow();
+
+            TransformRow rows[] = {
+                {"Position", &m_RasterizerWorld.objectPosition, 0.1f},
+                {"Rotation", &m_RasterizerWorld.objectRotation, 1.0f},
+                {"Scale", &m_RasterizerWorld.objectScale, 0.05f}
+            };
+
+            const char* axes[] = {"X", "Y", "Z"};
+            for (int r = 0; r < 3; r++) {
+                ImGui::TableNextRow();
+                
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextUnformatted(rows[r].name); // Draw property name
+
+                // Loop through the 3 axes (X, Y, Z)
+                for (int i = 0; i < 3; i++) {
+                    ImGui::TableNextColumn();
+                    ImGui::PushItemWidth(-FLT_MIN);
+                    
+                    // Unique hidden ID for ImGui to track (e.g., "##PositionX")
+                    std::string label = "##" + std::string(rows[r].name) + axes[i];
+                    
+                    // Access the glm::vec3 variables dynamically using [i]
+                    if (ImGui::DragFloat(label.c_str(), &(*rows[r].data)[i], rows[r].step)) {
+                        m_UpdateWindowFlag = true;
+                    }
+                    
+                    ImGui::PopItemWidth();
+                }
+            }
+            ImGui::EndTable();
+        }
     }
     ImGui::End();
 }
