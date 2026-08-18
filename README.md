@@ -158,7 +158,9 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
 * **File Loading:** Open native system file dialogs to load custom `.obj` (Rasterizer) or `.model` (Ray Tracer) assets.
 
 ### Ray Tracer Mode
-* **Display Type:** Step through the mathematical stages of the pipeline (e.g., Rays Calculation, Rays Intersections, Texture, Reflections, Transparency). **Note:** Because these display types function as progressive engine stages, you must load the `.model` file whose prefix number matches the selected stage in the dropdown list (e.g., load `ex_5_...` for Texture, or `ex_07_...` for Reflection) so the engine receives the correct mathematical parameters.
+* **Display Type:** Step through the mathematical and visual stages of the pipeline (e.g., Rays Calculation, Rays Intersections, Texture, Reflections, Transparency). 
+> [!NOTE]
+> Because these display types function as progressive engine stages, you must load the `.model` file whose prefix number matches the selected stage in the dropdown list (e.g., load `ex_5_...` for Texture, or `ex_07_...` for Reflection) so the engine receives the correct mathematical parameters.
 * **Depth of Field:** Real-time sliders to adjust the simulated Aperture Radius and Focal Distance.
 * **Sampling Parameters:** Dropdown menus to scale the processing load by adjusting Antialiasing Samples, Light Radius (for area lighting), and Soft Shadow Samples.
 
