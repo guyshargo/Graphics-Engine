@@ -165,7 +165,7 @@ void Application::ProcessEvents() {
 void Application::HandleOpenFile() {
     // Dynamically check if the folders exist right next to the .exe (Release ZIP).
     // If not, fall back to the IDE development path.
-    std::string rastPath = std::filesystem::exists("RAST_MOodels") ? "RAST_Models" : "../../assets/RAST_Models";
+    std::string rastPath = std::filesystem::exists("RAST_Models") ? "RAST_Models" : "../../assets/RAST_Models";
     std::string rtPath = std::filesystem::exists("RT_Models") ? "RT_Models" : "../../assets/RT_Models";
 
     // Determine the starting folder based on which engine is currently active
