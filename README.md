@@ -17,6 +17,7 @@ This project is a C++ port of a basic Java university course project, built from
 
 
 ## Showcase
+*The images below highlight a selection of the engine's rendering capabilities. Download the release or build the project from source to explore the full range of display types, shading algorithms, interactive UI controls and additional 3D models.*
 
 ### Ray Tracing
 | **Texture** | **Reflection** | **Transparency** |
@@ -26,7 +27,7 @@ This project is a C++ port of a basic Java university course project, built from
 ### Rasterization
 | **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** |
 | :---: | :---: | :---: |
-| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) |
+| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Phong](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) |
 
 ## Engine Architecture & Pipelines
 
@@ -161,9 +162,7 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
 * **Depth of Field:** Real-time sliders to adjust the simulated Aperture Radius and Focal Distance.
 * **Sampling Parameters:** Dropdown menus to scale the processing load by adjusting Antialiasing Samples, Light Radius (for area lighting), and Soft Shadow Samples.
 
-| **UI Controls** |
-| :---: |
-| ![UI Controls](assets/images/RayTracing-Controls.jpg) |
+![UI Controls](assets/images/RayTracing-Controls.jpg)
 
 ### Rasterizer Mode
 * **Display Type:** Switch between rendering algorithms (e.g., Wireframe, Face Colors, Vertex Interpolation, Flat/Gouraud/Phong Shading, Textures).
@@ -175,6 +174,4 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
     * **Right Click + Drag:** Pan the camera horizontally and vertically.
     * **Scroll Wheel:** Dolly (Zoom) the camera forward and backward.
 
-| **UI Controls** |
-| :---: |
-| ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
+![Rasterization Controls](assets/images/Rasterization-Controls.jpg)

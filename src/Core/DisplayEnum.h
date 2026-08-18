@@ -14,9 +14,7 @@ enum class RayTracingDisplayTypeEnum {
     EX_2_Rays_calculation,
     EX_3_1_Intersection_One_sphere,
     EX_3_3_Intersection_List_of_spheres,
-    EX_4_1_Lighting_Diffusive,
-    EX_4_2_Lighting_Ambient,
-    EX_4_3_Lighting_Specular,
+    EX_4_Lighting,
     EX_5_Texture,
     EX_7_Reflection,
     EX_8_Transparency
