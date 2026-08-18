@@ -19,15 +19,14 @@ This project is a C++ port of a basic Java university course project, built from
 ## Showcase
 
 ### Ray Tracing
-| **Texture** | **Reflection** | **Transparency** | **UI Controls** |
+| **Texture** | **Reflection** | **Transparency** |
 | :---: | :---: | :---: | :---: |
-|![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) | ![Transparency](assets/images/Transparency.jpg) | ![UI Controls](assets/images/Rasterization-Controls.jpg) |
+|![Texture](assets/images/Texture.jpg) | ![Reflection](assets/images/Reflection.jpg) | ![Transparency](assets/images/Transparency.jpg) |
 
 ### Rasterization
-| **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** | **UI Controls** |
+| **Wireframe (Face Edges)** | **Phong Shading** | **Texture + Lighting** |
 | :---: | :---: | :---: | :---: |
-| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) | ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
-
+| ![Face Edges](assets/images/Face-Edges.jpg) | ![Lighting Flat](assets/images/Lighting-Phong.jpg) | ![Texture Lighting](assets/images/Texture-Lighting.jpg) |
 
 ## Engine Architecture & Pipelines
 
@@ -162,6 +161,10 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
 * **Depth of Field:** Real-time sliders to adjust the simulated Aperture Radius and Focal Distance.
 * **Sampling Parameters:** Dropdown menus to scale the processing load by adjusting Antialiasing Samples, Light Radius (for area lighting), and Soft Shadow Samples.
 
+| **UI Controls** |
+| :---: |
+| ![UI Controls](assets/images/Rasterization-Controls.jpg) |
+
 ### Rasterizer Mode
 * **Display Type:** Switch between rendering algorithms (e.g., Wireframe, Face Colors, Vertex Interpolation, Flat/Gouraud/Phong Shading, Textures).
 * **Projection:** Toggle the camera projection matrix between Perspective and Orthographic.
@@ -171,3 +174,7 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
     * **Left Click + Drag:** Orbit the camera around the look-at target.
     * **Right Click + Drag:** Pan the camera horizontally and vertically.
     * **Scroll Wheel:** Dolly (Zoom) the camera forward and backward.
+
+| **UI Controls** |
+| :---: |
+| ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
