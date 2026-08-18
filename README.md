@@ -162,7 +162,8 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
 * **Depth of Field:** Real-time sliders to adjust the simulated Aperture Radius and Focal Distance.
 * **Sampling Parameters:** Dropdown menus to scale the processing load by adjusting Antialiasing Samples, Light Radius (for area lighting), and Soft Shadow Samples.
 
-![UI Controls](assets/images/RayTracing-Controls.jpg)
+| :---: |
+| ![UI Controls](assets/images/RayTracing-Controls.jpg) |
 
 ### Rasterizer Mode
 * **Display Type:** Switch between rendering algorithms (e.g., Wireframe, Face Colors, Vertex Interpolation, Flat/Gouraud/Phong Shading, Textures).
@@ -174,4 +175,5 @@ The engine features a comprehensive ImGui overlay for real-time parameter tuning
     * **Right Click + Drag:** Pan the camera horizontally and vertically.
     * **Scroll Wheel:** Dolly (Zoom) the camera forward and backward.
 
-![Rasterization Controls](assets/images/Rasterization-Controls.jpg)
+| :---: |
+| ![Rasterization Controls](assets/images/Rasterization-Controls.jpg) |
