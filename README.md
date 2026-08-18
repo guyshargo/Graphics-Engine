@@ -11,7 +11,7 @@ This project is a C++ port of a basic Java university course project, built from
   * [The Ray Tracing Pipeline](#1-the-ray-tracing-pipeline)
   * [The Rasterization Pipeline](#2-the-rasterization-pipeline)
 * [Engine Upgrades](#engine-upgrades)
-* [Architecture & Dependencies](#architecture--dependencies)
+* [Dependencies](#dependencies)
 * [Project Layout](#project-layout)
 * [Building the Project](#building-the-project)
 * [UI Controls](#ui-controls)
